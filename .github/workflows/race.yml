@@ -1,0 +1,62 @@
+name: race
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: race
+  cancel-in-progress: false
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Load race data from the data branch
+        run: |
+          set -euo pipefail
+          mkdir -p data
+          set +e
+          git ls-remote --exit-code --heads origin data > /dev/null
+          code=$?
+          set -e
+          if [ "$code" = "2" ]; then
+            echo "No data branch yet. This run starts a new race."
+            echo "RACE_NEW_OK=1" >> "$GITHUB_ENV"
+          elif [ "$code" = "0" ]; then
+            git fetch --depth=1 origin data
+            git archive FETCH_HEAD | tar -x -C data
+            test -s data/state.json || { echo "::error::data branch exists but state.json is missing. Stopping so the race is not reset."; exit 1; }
+            echo "Loaded race data:"; ls -la data
+          else
+            echo "::error::Could not reach the data branch (git exit $code). Stopping so the race is not reset."
+            exit 1
+          fi
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run one check
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          ALPACA_KEY: ${{ secrets.ALPACA_KEY }}
+          ALPACA_SECRET: ${{ secrets.ALPACA_SECRET }}
+          ALPHAVANTAGE_KEY: ${{ secrets.ALPHAVANTAGE_KEY }}
+          SEC_CONTACT_EMAIL: ${{ secrets.SEC_CONTACT_EMAIL }}
+          FORM_URL: ${{ secrets.FORM_URL }}
+          STATUS_URL: ${{ secrets.STATUS_URL }}
+          DASHBOARD_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/
+        run: python -m race.bot
+      - name: Save race data to the data branch
+        run: |
+          set -euo pipefail
+          test -s data/state.json
+          cd data
+          git init -q -b data
+          git config user.name "race-bot"
+          git config user.email "race-bot@users.noreply.github.com"
+          git add -A
+          git commit -qm "check $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          git push -qf "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" data:data

@@ -1,0 +1,386 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The $100 Race</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏁</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--page:#E9EEF4;--card:#fff;--ink:#0F1B2D;--mu:#475569;--soft:#64748B;--line:#D5DDE7;--u:#15803D;--n:#B91C1C;--track:#2F5E9E;--cond:"Barlow Condensed","Arial Narrow",Arial,sans-serif}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--page);color:var(--ink);font:500 15.5px/1.5 Barlow,"Segoe UI",Arial,sans-serif;font-variant-numeric:tabular-nums}
+a{color:#1D4ED8}
+button{font:inherit}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #F59E0B;outline-offset:2px}
+main,aside{min-width:0}
+.wrap{max-width:1520px;margin:0 auto;padding:24px 28px 40px;display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:24px}
+.top{display:flex;align-items:flex-end;gap:22px;margin-bottom:16px;flex-wrap:wrap}
+h1{font:800 50px/.9 var(--cond);margin:0;text-transform:uppercase;letter-spacing:.3px}
+.lap{flex:1;min-width:220px;max-width:420px}
+.lapt{display:flex;justify-content:space-between;font:700 18px var(--cond);text-transform:uppercase;letter-spacing:.5px}
+.lapbar{height:14px;border-radius:7px;background:#fff;border:2px solid var(--ink);overflow:hidden;margin-top:4px}
+.lapbar i{display:block;height:100%;width:0;background:repeating-linear-gradient(90deg,var(--ink) 0 8px,#fff 8px 16px);transition:width .8s}
+.upd{margin-left:auto;text-align:right;color:var(--mu);font-size:14px}.upd b{display:block;font-size:16px}
+.good{color:var(--u)}.warn{color:#B45309}.bad{color:var(--n)}
+nav{display:flex;gap:4px;border-bottom:3px solid var(--ink);overflow-x:auto;scrollbar-width:none}
+nav button{border:0;background:none;padding:9px 16px 8px;font:700 19px var(--cond);text-transform:uppercase;letter-spacing:.6px;color:var(--mu);cursor:pointer;white-space:nowrap;border-radius:8px 8px 0 0}
+nav button[aria-selected=true]{background:var(--ink);color:#fff}
+nav button:hover:not([aria-selected=true]){color:var(--ink);background:#DCE4EE}
+.tape{display:flex;gap:26px;align-items:center;background:var(--ink);color:#fff;border-radius:0 0 10px 10px;padding:9px 14px;margin:0 0 10px;overflow:hidden;white-space:nowrap;font-size:15px}
+.tl{flex:none;background:#EAB308;color:var(--ink);font:800 16px var(--cond);text-transform:uppercase;padding:2px 10px;border-radius:6px;letter-spacing:.5px;z-index:1}
+.tapein{display:flex;gap:28px;animation:tape 45s linear infinite}
+.tape:hover .tapein{animation-play-state:paused}
+@keyframes tape{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+@media (prefers-reduced-motion:reduce){.tapein{animation:none}}
+.tp b{font:800 18px var(--cond);margin-right:4px;color:#FDE68A}
+.health{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.hp{background:#fff;border:1px solid var(--line);border-radius:99px;padding:3px 11px;font-size:13.5px;font-weight:600}
+.card{background:var(--card);border-radius:14px;padding:20px 22px;border:1px solid var(--line);margin-bottom:22px;min-width:0}
+.hd{display:flex;align-items:baseline;gap:12px;margin-bottom:8px;flex-wrap:wrap}
+h2{font:800 26px var(--cond);text-transform:uppercase;margin:0;letter-spacing:.3px}
+.hd p,.sub{margin:0;color:var(--mu);font-size:14.5px}
+.grid2{display:grid;grid-template-columns:1.05fr .95fr;gap:22px}
+.panel{display:none}.panel.on{display:block}
+svg text{font-family:Barlow,Arial,sans-serif}
+.tk{fill:var(--mu);font-weight:700;font-size:13px}.tk.st{fill:var(--ink);font:800 14px var(--cond)}
+.pos{font:800 30px var(--cond);fill:var(--ink)}.lname{font-weight:700;font-size:15px;fill:var(--ink)}.lsub{font-size:12.5px;fill:var(--soft)}
+.bib{font:800 15px var(--cond);fill:#fff}.bval{font:800 19px var(--cond);fill:var(--ink)}.bd{font-weight:700;font-size:14px}
+.bd.u{fill:var(--u)}.bd.n{fill:var(--n)}
+.ax{fill:var(--soft);font-weight:600;font-size:12.5px}
+.legend{display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:4px}
+.lg{display:flex;align-items:center;gap:7px;font-size:14px;color:var(--mu);background:none;border:0;cursor:pointer;padding:2px 0}
+.lg i{width:18px;height:5px;border-radius:3px;display:inline-block}.lg i.da{background:none!important;border-top:3px dashed}
+.lg.off{opacity:.35}
+.tot{display:grid;grid-template-columns:repeat(4,1fr);margin-top:16px;border-top:2px solid var(--ink)}
+.tot div{padding:10px 12px 2px;border-right:1px solid var(--line)}.tot div:last-child{border:0}
+.tot small{display:block;color:var(--mu);font-size:13.5px}.tot b{font:800 30px var(--cond)}
+.tbl{width:100%;overflow-x:auto}
+table{width:100%;border-collapse:collapse}
+th{font:700 14px var(--cond);text-transform:uppercase;letter-spacing:.6px;color:var(--mu);text-align:left;padding:8px;border-bottom:2px solid var(--ink);white-space:nowrap}
+td{padding:10px 8px;border-bottom:1px solid var(--line);vertical-align:middle}
+tbody tr:nth-child(odd) td{background:#F6F8FB}
+.r{text-align:right}th.r{text-align:right}
+.up{color:var(--u);font-weight:700}.dn{color:var(--n);font-weight:700}
+.mn{display:block;color:var(--soft);font-size:13px;font-weight:500}
+.trend{font-weight:700;font-size:14px;padding:3px 10px;border-radius:99px;white-space:nowrap}.tu{background:#DCFCE7;color:#166534}.td{background:#FEE2E2;color:#991B1B}
+.rk{display:inline-block;min-width:28px;height:28px;line-height:28px;text-align:center;border-radius:14px;background:var(--ink);color:#fff;font:800 16px var(--cond);padding:0 6px}
+.grp td{background:#E2E8F0!important;font:800 16px var(--cond);text-transform:uppercase;letter-spacing:.5px}
+.mood{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:14px}
+.mood div{background:#F1F5F9;border-radius:10px;padding:10px 12px}.mood small{display:block;color:var(--mu);font-size:13px}.mood b{font:800 22px var(--cond)}
+.fi{display:grid;grid-template-columns:62px 1fr;gap:10px;padding:11px 0;border-bottom:1px solid var(--line)}
+.ft{font:800 18px var(--cond);line-height:1.2}.ft small{display:block;font:600 12px Barlow;color:var(--soft)}
+.fk{font-size:12.5px;font-weight:700;padding:2px 9px;border-radius:99px;margin-right:8px}
+.k-good{background:#DCFCE7;color:#166534}.k-bad{background:#FEE2E2;color:#991B1B}.k-neutral{background:#F1F5F9;color:#334155}.k-system{background:#DBEAFE;color:#1E40AF}
+.fsrc{color:var(--mu);font-size:13.5px}.fh{margin-top:3px;font-weight:600}.fh a{color:inherit;text-decoration:none}.fh a:hover{text-decoration:underline}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 10px}
+.chip{border:2px solid var(--ink);background:#fff;border-radius:99px;padding:4px 12px;font-weight:700;cursor:pointer}
+.chip[aria-pressed=true]{background:var(--ink);color:#fff}
+.al{border-radius:12px;padding:14px;margin-top:12px;border:2px solid var(--line);background:#fff}
+.al.s-open{border-color:#EAB308;background:#FFFBEB}.al.s-blocked{background:#FEF2F2;border-color:#FECACA}.al.s-done{background:#F0FDF4;border-color:#BBF7D0}.al.s-skipped{background:#F8FAFC}
+.alh{display:flex;gap:8px;align-items:center}
+.stt{font:800 18px var(--cond);text-transform:uppercase;letter-spacing:.5px}
+.s-open .stt{color:#854D0E}.s-done .stt{color:#166534}.s-blocked .stt{color:#991B1B}.s-info .stt,.s-skipped .stt{color:#334155}
+.who{color:var(--mu);font-size:13.5px}
+.alt{font-weight:700;font-size:17.5px;margin-top:8px;line-height:1.25}.als{color:#334155;font-size:14.5px;margin-top:3px}
+.lvls{margin-top:6px;font-size:14px;font-weight:600}
+.btns{display:flex;gap:8px;margin-top:12px}.btns a{flex:1;text-align:center;padding:9px;border-radius:9px;font-weight:700;text-decoration:none}
+.b1{background:var(--ink);color:#fff}.b2{background:#fff;border:2px solid var(--ink);color:var(--ink)}
+.key{display:flex;gap:14px;flex-wrap:wrap;margin-top:2px;color:var(--mu);font-size:13.5px}.key span{display:flex;align-items:center;gap:5px}.key i{width:12px;height:9px;display:inline-block}
+.w8{padding:11px 0;border-bottom:1px solid var(--line)}
+.w8t{display:flex;align-items:baseline;gap:8px}.w8t b{font:800 22px var(--cond)}.w8t span{color:var(--mu);font-size:13.5px}.w8t em{margin-left:auto;font-style:normal;font-weight:700;color:#854D0E;white-space:nowrap}
+.w8n{font-size:14.5px}
+.meter{height:9px;border-radius:5px;background:#E2E8F0;margin:6px 0 2px;overflow:hidden}.meter i{display:block;height:100%;background:linear-gradient(90deg,#FACC15,#16A34A);border-radius:5px}
+.nx{display:grid;grid-template-columns:128px 1fr;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:14.5px}
+.nx b{font:800 16px var(--cond);text-transform:uppercase}
+.lb{display:inline-block;min-width:26px;height:26px;border-radius:13px;color:#fff;text-align:center;line-height:26px;font:800 15px var(--cond);padding:0 5px}
+.rng{display:grid;grid-template-columns:auto minmax(90px,1fr) auto;gap:8px;align-items:center;font-size:13px;color:var(--mu);min-width:260px}
+.bar{position:relative;height:10px;border-radius:5px;background:linear-gradient(90deg,#FCA5A5,#E2E8F0 45%,#BBF7D0)}
+.bar i{position:absolute;top:-4px;width:12px;height:18px;margin-left:-6px;background:var(--ink);border-radius:3px}
+.empty{padding:18px;border:2px dashed var(--line);border-radius:12px;color:var(--mu);text-align:center;margin-top:10px}
+.brief{border-left:6px solid #EAB308;background:#FFFBEB;padding:10px 14px;border-radius:0;margin-bottom:16px}
+.brief b{font:800 18px var(--cond);text-transform:uppercase;margin-right:6px}
+.set{display:grid;grid-template-columns:220px 1fr;gap:6px 16px;font-size:15px}.set dt{color:var(--mu)}.set dd{margin:0;font-weight:600}
+input[type=url]{width:100%;padding:9px 11px;border:2px solid var(--line);border-radius:8px;font:inherit}
+.btn{border:0;background:var(--ink);color:#fff;border-radius:8px;padding:9px 16px;font-weight:700;cursor:pointer;margin-top:8px}
+.foot{color:var(--mu);font-size:13px;margin-top:6px}
+.err{background:#FEF2F2;border:2px solid #FECACA;border-radius:12px;padding:16px;margin-bottom:16px}
+@media (max-width:1100px){.wrap{grid-template-columns:minmax(0,1fr);padding:16px}.grid2{grid-template-columns:1fr}h1{font-size:40px}.tot{grid-template-columns:repeat(2,1fr)}.upd{text-align:left;margin-left:0}}
+@media (max-width:560px){.card{padding:16px}.set{grid-template-columns:1fr}.nx{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<main>
+  <div class="top">
+    <h1 id="title">The $100<br>Race</h1>
+    <div class="lap"><div class="lapt"><span id="dayof">Loading</span><span id="togo"></span></div><div class="lapbar"><i id="lapbar"></i></div></div>
+    <div class="upd" id="upd"><b>Loading</b></div>
+  </div>
+  <nav role="tablist" id="tabs"></nav>
+  <div class="tape" aria-label="On deck"><span class="tl">On deck</span><div class="tapein" id="tape"></div></div>
+  <div class="health" id="health"></div>
+  <div id="error"></div>
+
+  <section class="panel on" id="p-race" role="tabpanel">
+    <div id="briefbox"></div>
+    <div class="card"><div class="hd"><h2>Standings</h2><p>Each lane started with $100 at the white line. Right of the line is profit, left is loss.</p></div><div id="track"></div></div>
+    <div class="card"><div class="hd"><h2>Open positions</h2><p>What each lane holds right now, and how close it is to its exit.</p></div><div id="pos-short"></div></div>
+    <div class="card"><div class="hd"><h2>Profit and loss over time</h2><p>Dashed lines are the hold-only benchmarks. Tap a name to hide or show it.</p></div><div id="chart"></div><div class="legend" id="legend"></div><div class="tot" id="totals"></div></div>
+    <div class="grid2"><div class="card"><div class="hd"><h2>Markets</h2><p>What the rules are watching</p></div><div id="mk-short"></div></div>
+    <div class="card"><div class="hd"><h2>Live feed</h2><p>News and everything the system does</p></div><div id="feed-short"></div></div></div>
+  </section>
+
+  <section class="panel" id="p-positions" role="tabpanel">
+    <div class="card"><div class="hd"><h2>Open positions</h2></div><div id="pos-full"></div></div>
+    <div class="card"><div class="hd"><h2>Closed trades</h2><p>Every finished trade, newest first, after fees.</p></div><div id="closed"></div></div>
+  </section>
+  <section class="panel" id="p-deck" role="tabpanel">
+    <div class="card"><div class="hd"><h2>On deck</h2><p>Not bought yet. The bar fills as each one nears its buy signal.</p></div><div id="deck-full"></div></div>
+  </section>
+  <section class="panel" id="p-alerts" role="tabpanel">
+    <div class="card"><div class="hd"><h2>All alerts</h2><p>Every alert ever sent. Nothing is deleted.</p></div><div class="chips" id="al-filter"></div><div id="al-full"></div></div>
+  </section>
+  <section class="panel" id="p-markets" role="tabpanel">
+    <div class="card"><div class="hd"><h2>Market mood</h2></div><div id="mood-full"></div></div>
+    <div class="card"><div class="hd"><h2>Everything the rules watch</h2><p>Rank is by momentum inside each group.</p></div><div id="mk-full"></div></div>
+  </section>
+  <section class="panel" id="p-feed" role="tabpanel">
+    <div class="card"><div class="hd"><h2>News feed</h2></div><div class="chips" id="fd-filter"></div><div id="feed-full"></div></div>
+  </section>
+  <section class="panel" id="p-mine" role="tabpanel">
+    <div class="card"><div class="hd"><h2>My trades 🔒</h2></div>
+      <p>Your real trades stay in your private Google Sheet. This public page never shows your real dollar amounts.</p>
+      <p id="mine-link"></p>
+      <p class="sub">Save your private sheet link below. It is stored only in this browser, on this device.</p>
+      <label for="sheet">Private sheet link</label><input type="url" id="sheet" placeholder="https://docs.google.com/spreadsheets/...">
+      <label for="form" style="display:block;margin-top:10px">Private form link (used by the I did it and Skip buttons)</label><input type="url" id="form" placeholder="https://docs.google.com/forms/...ALERT_ID...CHOICE">
+      <button class="btn" id="savelinks">Save on this device</button> <span id="saved" class="good"></span>
+    </div>
+  </section>
+  <section class="panel" id="p-settings" role="tabpanel">
+    <div class="card"><div class="hd"><h2>Settings</h2><p>Change these in the settings file on GitHub. Changes apply on the next 5-minute check.</p></div><dl class="set" id="settings"></dl><p id="editlink"></p></div>
+    <div class="card"><div class="hd"><h2>System health</h2></div><div id="health-full"></div></div>
+  </section>
+  <p class="foot">Pretend money only. Nothing here places a real trade, and this is not financial advice.</p>
+</main>
+
+<aside>
+  <div class="card"><div class="hd"><h2>Race control</h2></div>
+    <div class="key"><span><i style="background:#EAB308"></i>Needs your call</span><span><i style="background:#16A34A"></i>Done</span><span><i style="background:#DC2626"></i>Blocked</span><span><i style="background:#94A3B8"></i>Report</span></div>
+    <div id="al-short"></div></div>
+  <div class="card"><div class="hd"><h2>On deck</h2></div><p class="sub">Not bought yet. The bar fills as it nears its buy signal.</p><div id="deck-short"></div></div>
+  <div class="card"><div class="hd"><h2>Next up</h2></div><div id="next"></div></div>
+</aside>
+</div>
+
+<script>
+const TABS=[["race","Race"],["positions","Positions"],["deck","On deck"],["alerts","Alerts"],["markets","Markets"],["feed","News feed"],["mine","My trades 🔒"],["settings","Settings"]];
+const Q=new URLSearchParams(location.search);
+function dataBase(){
+  if(Q.get("data"))return Q.get("data").replace(/\/?$/,"/");
+  const m=location.hostname.match(/^([^.]+)\.github\.io$/);
+  if(m){const repo=location.pathname.split("/").filter(Boolean)[0]||`${m[1]}.github.io`;return `https://raw.githubusercontent.com/${m[1]}/${repo}/data/`;}
+  return "data/";
+}
+const BASE=dataBase();
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const money=(v,d=2)=>v==null?"n/a":(v<0?"-":"")+"$"+Math.abs(v).toLocaleString("en-US",{minimumFractionDigits:d,maximumFractionDigits:d});
+const px=v=>v==null?"n/a":money(v,v>=1000?2:v>=1?2:4);
+const sgn=v=>(v>=0?"+":"-")+"$"+Math.abs(v).toFixed(2);
+const pct=v=>(v>=0?"+":"")+v.toFixed(1)+"%";
+const etf=(ts,o)=>new Date(ts*1000).toLocaleString("en-US",Object.assign({timeZone:"America/New_York"},o));
+const when=ts=>{const s=Date.now()/1000-ts;if(s<90)return"just now";if(s<3600)return Math.round(s/60)+" min ago";if(s<86400)return etf(ts,{hour:"numeric",minute:"2-digit"});return etf(ts,{weekday:"short",hour:"numeric",minute:"2-digit"})};
+const store={get:k=>{try{return localStorage.getItem(k)||""}catch(e){return""}},set:(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}}};
+let D={},hidden=new Set(),alFilter="all",fdFilter="all";
+
+function tabs(){
+  $("tabs").innerHTML=TABS.map(([k,l])=>`<button role="tab" id="t-${k}" aria-controls="p-${k}" aria-selected="${k==="race"}">${l}</button>`).join("");
+  $("tabs").onclick=e=>{const b=e.target.closest("button");if(b)show(b.id.slice(2))};
+  window.addEventListener("hashchange",()=>show(location.hash.slice(1)||"race",true));
+  if(location.hash)show(location.hash.slice(1),true);
+}
+function show(k,fromHash){
+  if(!TABS.some(t=>t[0]===k))k="race";
+  TABS.forEach(([t])=>{$("t-"+t).setAttribute("aria-selected",t===k);$("p-"+(t==="deck"?"deck":t)).classList.toggle("on",t===k)});
+  if(!fromHash)history.replaceState(null,"","#"+k);
+}
+
+async function load(){
+  const files=["race","alerts","feed","markets","watch","health","config"];
+  try{
+    const res=await Promise.all(files.map(f=>fetch(BASE+f+".json?t="+Math.floor(Date.now()/60000)).then(r=>{if(!r.ok)throw new Error(f+".json: "+r.status);return r.json()})));
+    files.forEach((f,i)=>D[f]=res[i]);
+    $("error").innerHTML="";
+    render();
+  }catch(e){
+    $("error").innerHTML=`<div class="err"><b>The race data could not be loaded.</b><br>${esc(e.message)}. The first 5-minute check may not have run yet, or the data branch is missing. Open the Actions tab on GitHub and run the "race" workflow once.</div>`;
+  }
+}
+
+function render(){
+  const R=D.race,lanes=R.lanes.filter(l=>!l.shadow),all=R.lanes.concat(R.bench.map(b=>({...b,bench:true})));
+  document.title=`${R.title}: ${lanes.slice().sort((a,b)=>b.value-a.value)[0].name} leads`;
+  const day=Math.min(30,Math.floor((R.now-R.start)/86400)+1),frac=Math.min(1,(R.now-R.start)/(R.end-R.start));
+  $("dayof").textContent=R.finished?"Race finished":`Day ${day} of 30`;
+  $("togo").textContent=`Started ${etf(R.start,{month:"short",day:"numeric"})}`+(R.finished?"":` · ${Math.max(0,Math.ceil((R.end-R.now)/86400))} days to go`);
+  $("lapbar").style.width=(frac*100).toFixed(1)+"%";
+  const H=D.health,srcs=Object.entries(H.sources||{}),bad=srcs.filter(([,v])=>!v.ok),age=(Date.now()/1000-H.updated)/60;
+  const ai=R.ai||{};
+  $("upd").innerHTML=`<b class="${age>30?"bad":bad.length?"warn":"good"}">● ${age>30?"No check in "+Math.round(age)+" minutes":bad.length?bad.length+" source"+(bad.length>1?"s":"")+" having trouble":"All systems running"}</b>Last check ${when(H.updated)}. AI spend ${money(ai.cost||0)} of ${money(R.ai_cap)} this month`;
+  $("health").innerHTML=srcs.map(([k,v])=>`<span class="hp ${v.ok?"good":"bad"}" title="${esc(v.note||"")}">● ${esc(k)}${v.note&&v.ok?" · "+esc(v.note):""}</span>`).join("");
+  const rm=R.risk_mode||{};
+  $("briefbox").innerHTML=rm.text?`<div class="brief"><b>${rm.mode==="careful"?"Careful mode today":"Normal mode today"}</b>${esc(rm.text)} <span class="sub">(${esc(rm.by||"")}, ${esc(rm.date||"")})</span></div>`:"";
+  track(lanes,R.bench);
+  positions(lanes,"pos-short",false);positions(R.lanes,"pos-full",true);closed(R.lanes);
+  chart(all);totals(R,lanes);
+  markets("mk-short",true);markets("mk-full",false);mood();
+  feed("feed-short",8);feed("feed-full",200);
+  alerts("al-short",true);alerts("al-full",false);
+  deck("deck-short",5);deck("deck-full",50);tape();
+  nextUp();settings();mine();
+}
+
+function track(lanes,bench){
+  const rows=lanes.slice().sort((a,b)=>b.value-a.value).concat(bench.map(b=>({...b,bench:true})));
+  const vals=rows.map(r=>r.value),lo=Math.min(94,Math.floor(Math.min(...vals)/5)*5-2),hi=Math.max(106,Math.ceil(Math.max(...vals)/5)*5+2);
+  const W=1000,G=240,LH=58,top=34,n=rows.length,x=v=>G+90+(v-lo)/(hi-lo)*(W-G-190);
+  let s=`<svg viewBox="0 0 ${W} ${top+n*LH+8}" width="100%" role="img" aria-label="Race standings"><rect x="${G}" y="${top}" width="${W-G}" height="${n*LH}" rx="10" fill="#2F5E9E"/>`;
+  for(let i=1;i<n;i++)s+=`<line x1="${G}" x2="${W}" y1="${top+i*LH}" y2="${top+i*LH}" stroke="#fff" stroke-opacity=".55" stroke-width="2"/>`;
+  const step=(hi-lo)>40?10:5;
+  for(let t=Math.ceil(lo/step)*step;t<=hi;t+=step){const X=x(t),st=t===100;s+=`<line x1="${X}" x2="${X}" y1="${top}" y2="${top+n*LH}" stroke="#fff" stroke-opacity="${st?.95:.18}" stroke-width="${st?4:1}" ${st?"":'stroke-dasharray="3 5"'}/><text x="${X}" y="${top-10}" text-anchor="middle" class="tk${st?" st":""}">${st?"START $100":"$"+t}</text>`}
+  rows.forEach((r,i)=>{const y=top+i*LH,d=r.value-100,X=x(r.value),w=170,bx=Math.min(Math.max(X-w/2,G+6),W-w-6);
+    const place=r.bench?"":lanes.length?i+1:"";
+    const holding=r.positions.length?"Holding "+r.positions.map(p=>p.symbol).join(", "):"In cash";
+    s+=`<text x="0" y="${y+26}" class="pos">${place}</text><text x="28" y="${y+25}" class="lname">${esc(r.name)}</text><text x="28" y="${y+43}" class="lsub">${r.bench?"Benchmark":esc(holding)}</text>`;
+    s+=`<line x1="${x(100)}" x2="${X}" y1="${y+LH/2}" y2="${y+LH/2}" stroke="#fff" stroke-opacity=".5" stroke-width="6" stroke-linecap="round"/>`;
+    s+=`<rect x="${bx}" y="${y+9}" width="${w}" height="${LH-18}" rx="20" fill="${r.bench?"#E2E8F0":"#fff"}" stroke="${r.color}" stroke-width="${r.bench?1.5:3}"/><circle cx="${bx+20}" cy="${y+LH/2}" r="13" fill="${r.color}"/><text x="${bx+20}" y="${y+LH/2+5}" text-anchor="middle" class="bib">${r.bench?"":esc(r.id)}</text><text x="${bx+40}" y="${y+LH/2+6}" class="bval">${money(r.value)}</text><text x="${bx+w-12}" y="${y+LH/2+6}" text-anchor="end" class="bd ${d>=0?"u":"n"}">${pct(d)}</text>`;
+  });
+  $("track").innerHTML=s+"</svg>";
+}
+
+function rangeBar(p){
+  const stop=p.stop,tp=p.tp;
+  if(stop==null)return '<span class="sub">No stop</span>';
+  const hiEnd=tp!=null?tp:p.now+(p.now-stop);
+  const m=Math.max(2,Math.min(98,(p.now-stop)/((hiEnd-stop)||1)*100));
+  return `<div class="rng"><span>${px(stop)}${p.stop_label?" "+esc(p.stop_label):""}</span><div class="bar" title="Now ${px(p.now)}"><i style="left:${m}%"></i></div><span>${tp!=null?px(tp):"No cap"}</span></div>`;
+}
+function positions(lanes,id,full){
+  const rows=lanes.flatMap(l=>l.positions.map(p=>({...p,l})));
+  if(!rows.length){$(id).innerHTML='<div class="empty">No open positions right now. Every lane is in cash, waiting for its rules to say buy.</div>';return}
+  $(id).innerHTML=`<div class="tbl"><table><thead><tr><th>Lane</th><th>Holding and why</th><th class="r">Value</th><th class="r">Bought at</th><th class="r">Now</th><th class="r">Profit</th><th>Stop-loss &nbsp;◆ now&nbsp; take-profit</th>${full?"<th>Since</th>":""}</tr></thead><tbody>`+
+  rows.map(p=>`<tr><td><span class="lb" style="background:${p.l.color}">${esc(p.l.id.replace("_RH"," RH"))}</span></td><td><b>${esc(p.symbol)}</b><span class="mn">${esc(p.why)}</span></td><td class="r">${money(p.value)}</td><td class="r">${px(p.entry)}</td><td class="r">${px(p.now)}</td><td class="r ${p.pnl>=0?"up":"dn"}">${sgn(p.pnl)}</td><td>${rangeBar(p)}</td>${full?`<td>${when(p.since)}</td>`:""}</tr>`).join("")+"</tbody></table></div>";
+}
+function closed(lanes){
+  const rows=lanes.flatMap(l=>l.trades.map(t=>({...t,l}))).sort((a,b)=>b.closed-a.closed);
+  $("closed").innerHTML=rows.length?`<div class="tbl"><table><thead><tr><th>Lane</th><th>Asset</th><th class="r">Bought</th><th class="r">Sold</th><th class="r">Result</th><th>Why it sold</th><th>When</th></tr></thead><tbody>`+
+  rows.map(t=>`<tr><td><span class="lb" style="background:${t.l.color}">${esc(t.l.id.replace("_RH"," RH"))}</span></td><td><b>${esc(t.symbol)}</b><span class="mn">${esc(t.why)}</span></td><td class="r">${px(t.entry)}</td><td class="r">${px(t.exit)}</td><td class="r ${t.pnl>=0?"up":"dn"}">${sgn(t.pnl)}</td><td>${esc(t.reason)}</td><td>${when(t.closed)}</td></tr>`).join("")+"</tbody></table></div>":'<div class="empty">No finished trades yet.</div>';
+}
+
+function chart(all){
+  const W=900,H=260,P=46,series=all.filter(l=>!hidden.has(l.id)&&l.history.length);
+  const pts=series.flatMap(l=>l.history);
+  if(!pts.length){$("chart").innerHTML='<div class="empty">The chart fills in after the first few checks.</div>';}
+  else{
+    const t0=Math.min(...pts.map(p=>p[0])),t1=Math.max(...pts.map(p=>p[0]),t0+3600);
+    let lo=Math.min(99,...pts.map(p=>p[1])),hi=Math.max(101,...pts.map(p=>p[1]));const pad=(hi-lo)*.08;lo-=pad;hi+=pad;
+    const X=t=>P+(t-t0)/(t1-t0)*(W-P-10),Y=v=>H-28-(v-lo)/(hi-lo)*(H-40);
+    let s=`<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Account value over time">`;
+    const step=(hi-lo)>30?10:(hi-lo)>12?5:(hi-lo)>5?2:1;
+    for(let g=Math.ceil(lo/step)*step;g<=hi;g+=step)s+=`<line x1="${P}" x2="${W-10}" y1="${Y(g)}" y2="${Y(g)}" stroke="${g===100?"#94A3B8":"#E2E8F0"}"/><text x="0" y="${Y(g)+4}" class="ax">$${g}</text>`;
+    const days=Math.max(1,Math.round((t1-t0)/86400)),every=Math.max(1,Math.ceil(days/6));
+    for(let d=0;d<=days;d+=every){const t=t0+d*86400;if(t>t1)break;s+=`<text x="${X(t)}" y="${H-6}" class="ax" text-anchor="${d===0?"start":"middle"}">${etf(t,{month:"short",day:"numeric"})}</text>`}
+    series.sort((a,b)=>(b.bench?1:0)-(a.bench?1:0)).forEach(l=>{s+=`<polyline fill="none" stroke="${l.color}" stroke-width="${l.bench?2:2.6}" ${l.bench||l.shadow?'stroke-dasharray="6 5"':""} stroke-linejoin="round" points="${l.history.map(p=>X(p[0]).toFixed(1)+","+Y(p[1]).toFixed(1)).join(" ")}"><title>${esc(l.name)}: ${money(l.value)}</title></polyline>`});
+    $("chart").innerHTML=s+"</svg>";
+  }
+  $("legend").innerHTML=all.map(l=>`<button class="lg ${hidden.has(l.id)?"off":""}" data-id="${esc(l.id)}" aria-pressed="${!hidden.has(l.id)}"><i class="${l.bench||l.shadow?"da":""}" style="background:${l.color};border-color:${l.color}"></i>${l.bench?"":esc(l.id.replace("_RH"," RH"))+" "}${esc(l.name)}</button>`).join("");
+  $("legend").onclick=e=>{const b=e.target.closest(".lg");if(!b)return;const id=b.dataset.id;hidden.has(id)?hidden.delete(id):hidden.add(id);chart(all)};
+}
+function totals(R,lanes){
+  const trades=lanes.reduce((a,l)=>a+l.trade_count,0),fees=lanes.reduce((a,l)=>a+l.fees,0);
+  const lead=lanes.slice().sort((a,b)=>b.value-a.value)[0],spy=R.bench.find(b=>b.id==="SPY");
+  const vs=lead&&spy?((lead.value-spy.value)/spy.value*100):0;
+  $("totals").innerHTML=`<div><small>Closed trades</small><b>${trades}</b></div><div><small>Fees paid (pretend)</small><b>${money(fees)}</b></div><div><small>AI cost this month</small><b>${money((R.ai||{}).cost||0)}</b></div><div><small>Leader vs holding SPY</small><b class="${vs>=0?"up":"dn"}">${pct(vs)}</b></div>`;
+}
+
+function markets(id,short){
+  const rows=(D.markets.rows||[]);
+  let groups=[...new Set(rows.map(r=>r.group))];
+  let out=`<div class="tbl"><table><thead><tr><th>Asset</th><th class="r">Price</th><th class="r">Since last close</th><th>Trend</th><th class="r">Rank</th></tr></thead><tbody>`;
+  groups.forEach(g=>{let rs=rows.filter(r=>r.group===g).sort((a,b)=>(a.rank||99)-(b.rank||99));if(short)rs=rs.slice(0,g.startsWith("Stocks")?3:4);
+    out+=`<tr class="grp"><td colspan="5">${esc(g)}</td></tr>`+rs.map(r=>`<tr><td><b>${esc(r.symbol)}</b><span class="mn">${esc(r.src)}${r.mom!=null?", momentum "+pct(r.mom):""}</span></td><td class="r">${px(r.price)}</td><td class="r ${r.change>=0?"up":"dn"}">${r.change==null?"n/a":(r.change>=0?"▲ ":"▼ ")+Math.abs(r.change).toFixed(1)+"%"}</td><td>${r.trend_up==null?"":`<span class="trend ${r.trend_up?"tu":"td"}">${r.trend_up?"Rising":"Falling"}</span>`}</td><td class="r">${r.rank?`<span class="rk">${r.rank}</span>`:""}</td></tr>`).join("")});
+  $(id).innerHTML=out+"</tbody></table></div>"+(short?moodHtml(true):"");
+}
+function moodHtml(short){
+  const m=D.markets.mood||{},c=[];
+  if(m.fear_greed)c.push(["Crypto fear and greed",`${m.fear_greed.value}, ${m.fear_greed.label.toLowerCase()}`]);
+  if(m.vix)c.push(["VIX fear gauge",`${m.vix.value}, ${m.vix.label}`]);
+  if(m.next_event)c.push(["Next big US event",`${m.next_event.title}, ${etf(m.next_event.ts,{weekday:"short",hour:"numeric",minute:"2-digit"})}`]);
+  if(!short&&m.ten_year)c.push(["10-year Treasury yield",`${m.ten_year.value}%`]);
+  if(!short&&m.polymarket)c.push(["Prediction market",`${m.polymarket.question}: ${Object.entries(m.polymarket.odds).map(([k,v])=>k+" "+v+"%").join(", ")}`]);
+  if(!short&&m.reddit)c.push(["Most mentioned on Reddit",m.reddit.map(r=>r.ticker).join(", ")]);
+  return `<div class="mood">${c.map(([a,b])=>`<div><small>${esc(a)}</small><b>${esc(b)}</b></div>`).join("")}</div>`;
+}
+function mood(){$("mood-full").innerHTML=moodHtml(false)}
+
+function feed(id,limit){
+  const kinds={good:"Good news",bad:"Bad news",neutral:"Neutral",system:"System"};
+  let rows=D.feed;if(id==="feed-full"&&fdFilter!=="all")rows=rows.filter(f=>f.kind===fdFilter);
+  rows=rows.slice(0,limit);
+  $(id).innerHTML=rows.length?rows.map(f=>`<div class="fi"><div class="ft">${etf(f.ts,{hour:"numeric",minute:"2-digit"}).replace(/ (AM|PM)/,"")}<small>${etf(f.ts,{month:"short",day:"numeric"})}</small></div><div><span class="fk k-${f.kind}">${kinds[f.kind]}</span><span class="fsrc">${esc(f.source)}${f.symbols&&f.symbols.length?" · "+esc(f.symbols.join(", ")):""}</span><div class="fh">${f.url?`<a href="${esc(f.url)}" target="_blank" rel="noopener">${esc(f.text)}</a>`:esc(f.text)}</div></div></div>`).join(""):'<div class="empty">Nothing in the feed yet.</div>';
+  if(id==="feed-full"){$("fd-filter").innerHTML=[["all","All"],...Object.entries(kinds)].map(([k,l])=>`<button class="chip" data-k="${k}" aria-pressed="${fdFilter===k}">${l}</button>`).join("");
+    $("fd-filter").onclick=e=>{const b=e.target.closest(".chip");if(b){fdFilter=b.dataset.k;feed("feed-full",200)}}}
+}
+
+function flag(status){
+  const c={open:"#EAB308",done:"#16A34A",blocked:"#DC2626",skipped:"#94A3B8",info:"#94A3B8"}[status]||"#94A3B8";
+  return `<svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true"><rect x="3" y="2" width="2.4" height="26" rx="1" fill="#475569"/><rect x="5" y="3" width="20" height="13" fill="${c}"/></svg>`;
+}
+function alerts(id,short){
+  const label={open:"Needs your call",done:"Done",skipped:"Skipped",blocked:"Blocked",info:"Report"};
+  let rows=D.alerts;
+  if(short){const open=rows.filter(a=>a.status==="open");rows=open.concat(rows.filter(a=>a.status!=="open")).slice(0,5)}
+  else if(alFilter!=="all")rows=rows.filter(a=>a.status===alFilter);
+  const form=store.get("race_form");
+  $(id).innerHTML=rows.length?rows.map(a=>{
+    const btn=a.status==="open"?(form?`<div class="btns"><a class="b1" target="_blank" rel="noopener" href="${esc(form.replace("ALERT_ID",a.id).replace("CHOICE","Done"))}">I did it</a><a class="b2" target="_blank" rel="noopener" href="${esc(form.replace("ALERT_ID",a.id).replace("CHOICE","Skipped"))}">Skip</a></div>`:`<p class="sub">Add your private form link under My trades to get the I did it and Skip buttons.</p>`):"";
+    return `<div class="al s-${a.status}" id="a-${a.id}"><div class="alh">${flag(a.status)}<div><div class="stt">${label[a.status]||a.status}</div><div class="who">${a.lane==="ALL"?"Whole race":"Lane "+esc(a.lane.replace("_RH"," RH"))} · ${when(a.ts)}</div></div></div><div class="alt">${esc(a.title)}</div><div class="als">${esc(a.detail)}</div>${a.stop||a.tp?`<div class="lvls">Stop-loss ${esc(a.stop||"none")} · Take-profit ${esc(a.tp||"none")}</div>`:""}${btn}</div>`}).join(""):'<div class="empty">No alerts here.</div>';
+  if(!short){$("al-filter").innerHTML=[["all","All"],["open","Needs your call"],["done","Done"],["skipped","Skipped"],["blocked","Blocked"],["info","Reports"]].map(([k,l])=>`<button class="chip" data-k="${k}" aria-pressed="${alFilter===k}">${l}</button>`).join("");
+    $("al-filter").onclick=e=>{const b=e.target.closest(".chip");if(b){alFilter=b.dataset.k;alerts("al-full",false)}}}
+}
+function deck(id,limit){
+  const rows=(D.watch||[]).slice(0,limit);
+  $(id).innerHTML=rows.length?rows.map(w=>{const ready=w.away===0,fill=w.away==null?35:ready?100:Math.max(6,100-w.away*20);
+    return `<div class="w8"><div class="w8t"><b>${esc(w.symbol)}</b><span>Lane ${esc(w.lanes)}</span><em>${ready?"Ready":w.away==null?"Ranking":w.away.toFixed(1)+"% away"}</em></div><div class="w8n">${esc(w.need)}: <b>${esc(w.level)}</b></div><div class="meter"><i style="width:${fill}%"></i></div></div>`}).join(""):'<div class="empty">Nothing close to a buy signal right now.</div>';
+}
+function tape(){
+  const items=(D.watch||[]).slice(0,8).map(w=>`<span class="tp"><b>${esc(w.symbol)}</b>${w.away===0?"ready at next check":w.away==null?esc(w.need.toLowerCase()):w.away.toFixed(1)+"% from buy signal"}</span>`).join("")||'<span class="tp">Nothing close to a buy signal right now</span>';
+  $("tape").innerHTML=items+items;
+}
+function nextUp(){$("next").innerHTML=(D.race.next_up||[]).map(n=>`<div class="nx"><b>${esc(n.when)}</b><span>${esc(n.what)}</span></div>`).join("")}
+function settings(){
+  const c=D.config,rows=[["Alert mode",c.alert_mode==="report"?"Report only (pretend trades, no action needed)":"Signals (rules say buy or sell, you decide)"],
+    ["Lanes that send buy and sell signals",c.alert_lanes.join(", ")+". Other lanes trade pretend money only"],["Quiet hours (Eastern)",`${c.quiet_hours_et[0]}:00 to ${c.quiet_hours_et[1]}:00. Buy alerts wait, exits always come through`],
+    ["Daily recap",`${c.recap_hour_et>12?c.recap_hour_et-12:c.recap_hour_et}:00 PM Eastern`],["AI spending cap",money(c.ai_monthly_cap_usd)+" a month"],
+    ["Race length",c.race_days+" days"],["Starting cash per lane",money(c.start_cash)],
+    ["Crypto fee (Kraken limit order)",(c.fees.kraken_limit*100).toFixed(2)+"%"],["Crypto fee (Robinhood copy lane)",(c.fees.robinhood_crypto*100).toFixed(2)+"%"],["Stock trade cost (spread)",(c.fees.stock_spread*100).toFixed(2)+"%"]];
+  $("settings").innerHTML=rows.map(([a,b])=>`<dt>${esc(a)}</dt><dd>${esc(b)}</dd>`).join("");
+  const m=location.hostname.match(/^([^.]+)\.github\.io$/);
+  $("editlink").innerHTML=m?`<a href="https://github.com/${m[1]}/${location.pathname.split("/").filter(Boolean)[0]}/edit/main/race/config.json" target="_blank" rel="noopener">Edit settings on GitHub</a>`:"";
+  const H=D.health.sources||{};
+  $("health-full").innerHTML=`<div class="tbl"><table><thead><tr><th>Source</th><th>Status</th><th>Last worked</th><th>Note</th></tr></thead><tbody>${Object.entries(H).map(([k,v])=>`<tr><td><b>${esc(k)}</b></td><td class="${v.ok?"up":"dn"}">${v.ok?"Working":"Trouble"}</td><td>${v.at?when(v.at):"never"}</td><td>${esc(v.note||"")}</td></tr>`).join("")}</tbody></table></div><p class="sub">Each check took ${D.health.tick_seconds} seconds. Market is ${D.health.market_open?"open":"closed"}.</p>`;
+}
+function mine(){
+  const sheet=store.get("race_sheet");
+  $("mine-link").innerHTML=sheet?`<a href="${esc(sheet)}" target="_blank" rel="noopener">Open my private trade sheet</a>`:"No sheet link saved on this device yet.";
+  $("sheet").value=sheet;$("form").value=store.get("race_form");
+}
+$("savelinks").onclick=()=>{store.set("race_sheet",$("sheet").value.trim());store.set("race_form",$("form").value.trim());$("saved").textContent="Saved on this device";mine();if(D.alerts){alerts("al-short",true);alerts("al-full",false)}};
+tabs();load();setInterval(load,60000);
+</script>
+</body>
+</html>
