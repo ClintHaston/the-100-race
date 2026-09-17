@@ -49,6 +49,18 @@ jobs:
           STATUS_URL: ${{ secrets.STATUS_URL }}
           DASHBOARD_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/
         run: python -m race.bot
+      - name: Make sure no key ended up in the saved data
+        env:
+          K1: ${{ secrets.ANTHROPIC_API_KEY }}
+          K2: ${{ secrets.ALPACA_SECRET }}
+          K3: ${{ secrets.ALPHAVANTAGE_KEY }}
+          K4: ${{ secrets.ALPACA_KEY }}
+        run: |
+          for k in "$K1" "$K2" "$K3" "$K4"; do
+            if [ -n "$k" ] && grep -rqF -- "$k" data; then echo "::error::A key was found in the data files. Nothing was saved."; exit 1; fi
+          done
+          if grep -rqE "sk-ant-[A-Za-z0-9_-]{10,}" data; then echo "::error::Something that looks like an Anthropic key is in the data files. Nothing was saved."; exit 1; fi
+          echo "No keys in the data files."
       - name: Save race data to the data branch
         run: |
           set -euo pipefail
