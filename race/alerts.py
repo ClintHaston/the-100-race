@@ -75,12 +75,15 @@ class Alerts:
                    "Tags": {"buy": "chart_with_upwards_trend", "sell": "chart_with_downwards_trend",
                             "blocked": "no_entry", "recap": "checkered_flag"}.get(a["kind"], "information_source")}
         actions = []
-        kr = self.kraken_link(a.get("symbol"))
-        if kr:
-            actions.append(f"view, {'Buy' if a['kind'] == 'buy' else 'Sell'} on Kraken, {kr}")
+        verb = "Buy" if a["kind"] == "buy" else "Sell"
         if self.dash:
+            # Opens the app on this trade: a button that launches Kraken, then the price box for I did it.
             headers["Click"] = f"{self.dash}#log-{a['id']}"
-            actions.append(f"view, I did it, {self.dash}#log-{a['id']}, clear=true")
+            actions.append(f"view, {verb} it, {self.dash}#log-{a['id']}")
+        else:
+            kr = self.kraken_link(a.get("symbol"))
+            if kr:
+                actions.append(f"view, {verb} on Kraken, {kr}")
         skip = self.one_tap_link(a, "Skipped")
         if skip:
             actions.append(f"http, Skip, {skip}, method=POST, clear=true")

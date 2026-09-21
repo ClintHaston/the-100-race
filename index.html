@@ -75,6 +75,9 @@ h2{font:700 21px/1.2 var(--display);letter-spacing:-.015em;margin:0 0 4px}
 .btn.kr{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;margin-top:14px;background:var(--ink);color:#fff;text-decoration:none}
 .btn.kr:hover{background:#000}.btn.kr svg{flex:none}
 .acts.after{margin-top:10px}
+.krc{display:inline-flex;align-items:center;gap:5px;font-size:13px;font-weight:700;color:var(--ink);text-decoration:none;background:var(--soft);border:1px solid var(--hair);padding:4px 10px;border-radius:99px;white-space:nowrap}
+.krc:hover{background:#EBEDF2}
+.sheet .btn.kr{margin:14px 0 4px}
 .install{display:none;margin-top:14px}.install.on{display:block}
 .steps{margin:10px 0 0;padding-left:20px;color:var(--ink2)}.steps li{margin:4px 0}
 .calmtext{font-size:17px;color:var(--ink2);margin:10px 0 0;max-width:40ch}
@@ -198,7 +201,7 @@ input:focus{border-color:var(--violet);outline:none}
 </div>
 
 <div class="scrim" id="scrim" aria-hidden="true"><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sh-t">
-  <h3 id="sh-t"></h3><p id="sh-p"></p>
+  <h3 id="sh-t"></h3><p id="sh-p"></p><a class="btn kr" id="sh-kr" href="#">Open Kraken</a>
   <div class="two">
     <div><label for="sh-price" id="sh-pl">Price you paid</label><div class="pre"><span>$</span><input id="sh-price" type="number" inputmode="decimal" step="any" min="0"></div></div>
     <div><label for="sh-dol" id="sh-dl">Dollars</label><div class="pre"><span>$</span><input id="sh-dol" type="number" inputmode="decimal" step="any" min="0"></div></div>
@@ -225,7 +228,10 @@ const NAMES={BTC:"Bitcoin",ETH:"Ether",SOL:"Solana",XRP:"XRP",DOGE:"Dogecoin",AV
 const TINT={BTC:"#F08C1B",ETH:"#6278E8",SOL:"#9B4DDE",XRP:"#2A3441",DOGE:"#C2A22F",AVAX:"#E3453C",LINK:"#2F5BD9",ADA:"#1D4FA3",MSTR:"#E4661E",NVDA:"#5A9A13",TSLA:"#C9302C",SPY:"#3E5A7E",QQQ:"#2C6E8F",GLD:"#B08A1E",XLE:"#4F7A3A",COIN:"#1652F0",PLTR:"#303640",AMD:"#1B1B1B",META:"#1877F2",AMZN:"#E5901B",SMCI:"#1F6F3F",HOOD:"#2FA85A",IWM:"#6B5BA6",TLT:"#51667D"};
 const av=s=>`<div class="av" style="background:${TINT[s]||"#5B35E8"}">${esc(s.length>4?s.slice(0,4):s)}</div>`;
 const COINS=["BTC","ETH","SOL","XRP","DOGE","AVAX","LINK","ADA"];
-const krakenLink=s=>COINS.includes(s)?`https://pro.kraken.com/app/trade/${s.toLowerCase()}-usd`:`https://www.kraken.com/stocks/${s.toLowerCase()}`;
+const krakenWeb=s=>COINS.includes(s)?`https://pro.kraken.com/app/trade/${s.toLowerCase()}-usd`:`https://www.kraken.com/stocks/${s.toLowerCase()}`;
+const isAndroid=()=>/android/i.test(navigator.userAgent);
+const krakenLink=s=>isAndroid()?`intent:#Intent;action=android.intent.action.MAIN;category=android.intent.category.LAUNCHER;package=com.kraken.invest.app;S.browser_fallback_url=${encodeURIComponent(krakenWeb(s))};end`:krakenWeb(s);
+const krChip=(s,label)=>`<a class="krc" href="${esc(krakenLink(s))}" ${isAndroid()?"":'target="_blank" rel="noopener"'} data-krchip="${esc(s)}">${esc(label||"Kraken")}${KR_ICON.replace('width="18" height="18"','width="13" height="13"')}</a>`;
 const KR_ICON=`<svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7"/><path d="M8 7h9v9"/></svg>`;
 let D={},drawn=false;
 
@@ -311,18 +317,18 @@ function todo(){
   if(!open.length){el.innerHTML=`<h2>Nothing to do</h2><p class="calmtext">Lane F takes its next look ${esc(nextCheck())}. Your phone buzzes only if it wants you to buy or sell.</p>`;return}
   el.innerHTML=`<h2>${open.length===1?"One thing to do":open.length+" things to do"}</h2><p class="sub">Place it on Kraken, then come back and tap I did it.</p>`+
   open.map(a=>`<div class="slip open" id="s-${a.id}"><div style="display:flex;gap:12px;align-items:center">${av(a.symbol)}<div><h3>${a.kind==="buy"?"Buy":"Sell"} ${esc(NAMES[a.symbol]||a.symbol)}</h3><p>${a.kind==="buy"&&a.dollars?usd(a.dollars)+" of "+esc(a.symbol)+" · ":""}signal price ${px(sigPrice(a))} · ${ago(a.ts)}</p></div></div>
-    <a class="btn kr" href="${esc(krakenLink(a.symbol))}" target="_blank" rel="noopener" data-kraken="${a.id}">${KR_ICON}${a.kind==="buy"?"Buy":"Sell"} on Kraken</a>
+    <a class="btn kr" href="${esc(krakenLink(a.symbol))}" ${isAndroid()?"":'target="_blank" rel="noopener"'} data-kraken="${a.id}">${KR_ICON}${a.kind==="buy"?"Buy":"Sell"} on Kraken</a>
     <div class="acts after"><button class="btn" data-skip="${a.id}">Skip</button><button class="btn go" data-log="${a.id}">I did it</button></div></div>`).join("");
 }
 function own(){
   const P=portfolio();
-  $("own").innerHTML=`<h2>What you own</h2>`+(P.rows.length?P.rows.sort((a,b)=>b.value-a.value).map(r=>`<div class="row">${av(r.symbol)}<div><div class="nm">${esc(NAMES[r.symbol]||r.symbol)}</div><div class="dt">${+r.units.toPrecision(4)} ${esc(r.symbol)} · bought at ${px(r.avg)}${r.own?"":" (signal price)"}</div></div><div><div class="val">${usd(r.value)}</div><div class="chg ${cls(r.pnl)}">${signed(r.pnl)} · ${pct(r.pnl/r.cost*100)}</div></div></div>`).join("")+(P.cash>0.009?`<div class="row"><div class="av" style="background:#9AA1AE">$</div><div><div class="nm">Cash</div><div class="dt">Waiting for the next buy signal</div></div><div class="val">${usd(P.cash)}</div></div>`:"")
+  $("own").innerHTML=`<h2>What you own</h2>`+(P.rows.length?P.rows.sort((a,b)=>b.value-a.value).map(r=>`<div class="row">${av(r.symbol)}<div><div class="nm">${esc(NAMES[r.symbol]||r.symbol)}</div><div class="dt">${+r.units.toPrecision(4)} ${esc(r.symbol)} · bought at ${px(r.avg)}${r.own?"":" (signal price)"}</div></div><div><div class="val">${usd(r.value)}</div><div class="chg ${cls(r.pnl)}">${signed(r.pnl)} · ${pct(r.pnl/r.cost*100)}</div><div style="text-align:right;margin-top:4px">${krChip(r.symbol,"Open in Kraken")}</div></div></div>`).join("")+(P.cash>0.009?`<div class="row"><div class="av" style="background:#9AA1AE">$</div><div><div class="nm">Cash</div><div class="dt">Waiting for the next buy signal</div></div><div class="val">${usd(P.cash)}</div></div>`:"")
     :`<p class="empty">Nothing yet. When you tap I did it on a buy, it shows up here with its live price.</p>`);
 }
 function nextIn(){
   const w=(D.watch||[]).filter(x=>x.lanes==="F"&&!portfolio().rows.some(r=>r.symbol===x.symbol)).slice(0,4);
   $("nextin").innerHTML=`<h2>Next in line for lane F</h2><p class="sub">Ranked by 20-day momentum. Lane F swaps in the top 2 each Monday.</p>`+
-   (w.length?w.map(x=>`<div class="row">${av(x.symbol)}<div><div class="nm">${esc(NAMES[x.symbol]||x.symbol)}</div><div class="dt">${esc(x.need)}</div></div><div class="val" style="font-size:15px">${priceNow(x.symbol)?px(priceNow(x.symbol)):""}</div></div>`).join("")
+   (w.length?w.map(x=>`<div class="row">${av(x.symbol)}<div><div class="nm">${esc(NAMES[x.symbol]||x.symbol)}</div><div class="dt">${esc(x.need)}</div></div><div><div class="val" style="font-size:15px">${priceNow(x.symbol)?px(priceNow(x.symbol)):""}</div><div style="text-align:right;margin-top:4px">${krChip(x.symbol)}</div></div></div>`).join("")
    :`<p class="empty">Your two holdings are still the top two. Nothing is knocking on the door.</p>`);
 }
 function compare(id,short){
@@ -347,7 +353,7 @@ function activity(){
   if(!rows.length)out+=`<p class="empty">No signals yet.</p>`;
   rows.forEach(a=>{const d=ET(a.ts,{weekday:"long",month:"short",day:"numeric"});if(d!==last){out+=`<div class="day">${esc(d)}</div>`;last=d}
     const st=statusOf(a),l=L[a.id]||{};
-    out+=`<div class="act">${av(a.symbol)}<div><div class="nm" style="font-weight:700">${a.kind==="buy"?"Buy":"Sell"} ${esc(NAMES[a.symbol]||a.symbol)}${a.dollars?" · "+usd(a.dollars):""}</div><div class="dt" style="color:var(--ink3);font-size:14px">Signal ${px(sigPrice(a))}${l.price?" · you paid "+px(l.price):""} · ${ET(a.ts,{hour:"numeric",minute:"2-digit"})} Eastern</div></div><span class="tag ${st}">${words[st]||st}</span></div>`});
+    out+=`<div class="act">${av(a.symbol)}<div><div class="nm" style="font-weight:700">${a.kind==="buy"?"Buy":"Sell"} ${esc(NAMES[a.symbol]||a.symbol)}${a.dollars?" · "+usd(a.dollars):""}</div><div class="dt" style="color:var(--ink3);font-size:14px">Signal ${px(sigPrice(a))}${l.price?" · you paid "+px(l.price):""} · ${ET(a.ts,{hour:"numeric",minute:"2-digit"})} Eastern</div></div><div style="text-align:right"><span class="tag ${st}">${words[st]||st}</span><div style="margin-top:6px">${st==="open"?krChip(a.symbol,(a.kind==="buy"?"Buy":"Sell")+" on Kraken"):krChip(a.symbol)}</div></div></div>`});
   $("activity").innerHTML=out;
   $("actside").innerHTML=`<h2>Your trade log</h2><p class="sub">Every I did it lands in your private Google Sheet with the price you entered.</p><div class="links">${sheetLink()?`<a class="lk" href="${esc(sheetLink())}" target="_blank" rel="noopener"><div>Open my Sheet<small>The $100 Race: my trades</small></div><span>Open</span></a>`:""}</div>`;
 }
@@ -390,11 +396,13 @@ let cur=null;
 function openSheet(id){
   const a=signals().find(x=>x.id===id);if(!a)return;
   cur=a;const buy=a.kind==="buy";
-  $("sh-t").textContent=`You ${buy?"bought":"sold"} ${NAMES[a.symbol]||a.symbol}`;
-  $("sh-p").textContent=`On Kraken. The signal price was ${px(sigPrice(a))}. Change it to what you actually ${buy?"paid":"got"}.`;
+  $("sh-t").textContent=`${buy?"Buy":"Sell"} ${NAMES[a.symbol]||a.symbol}`;
+  $("sh-p").textContent=`Place it on Kraken, then enter what you actually ${buy?"paid":"got"}. The signal price was ${px(sigPrice(a))}.`;
   $("sh-pl").textContent=buy?"Price you paid":"Price you sold at";
   $("sh-price").value=sigPrice(a)??"";$("sh-dol").value=a.dollars!=null?a.dollars.toFixed(2):"";
   $("sh-dl").textContent=buy?"Dollars you put in":"Dollars you got back";
+  const k=$("sh-kr");k.href=krakenLink(a.symbol);if(isAndroid()){k.removeAttribute("target")}else{k.target="_blank";k.rel="noopener"}
+  k.innerHTML=`${KR_ICON}${buy?"Buy":"Sell"} ${esc(a.symbol)} on Kraken first`;
   $("scrim").classList.add("on");$("scrim").setAttribute("aria-hidden","false");setTimeout(()=>$("sh-price").select(),60);
 }
 function closeSheet(){$("scrim").classList.remove("on");$("scrim").setAttribute("aria-hidden","true");cur=null;if(location.hash.startsWith("#log-"))history.replaceState(null,"",location.pathname+location.search+"#home")}
