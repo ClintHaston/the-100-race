@@ -377,9 +377,10 @@ function settings(){
 function mine(){
   const sheet=store.get("race_sheet");
   $("mine-link").innerHTML=sheet?`<a href="${esc(sheet)}" target="_blank" rel="noopener">Open my private trade sheet</a>`:"No sheet link saved on this device yet.";
-  $("sheet").value=sheet;$("form").value=store.get("race_form");
+  for(const [id,key] of [["sheet","race_sheet"],["form","race_form"]]){const el=$(id);if(document.activeElement!==el&&!el.dataset.dirty)el.value=store.get(key)}
 }
-$("savelinks").onclick=()=>{store.set("race_sheet",$("sheet").value.trim());store.set("race_form",$("form").value.trim());$("saved").textContent="Saved on this device";mine();if(D.alerts){alerts("al-short",true);alerts("al-full",false)}};
+["sheet","form"].forEach(id=>$(id).addEventListener("input",e=>e.target.dataset.dirty="1"));
+$("savelinks").onclick=()=>{store.set("race_sheet",$("sheet").value.trim());store.set("race_form",$("form").value.trim());delete $("sheet").dataset.dirty;delete $("form").dataset.dirty;$("saved").textContent="Saved on this device";mine();if(D.alerts){alerts("al-short",true);alerts("al-full",false)}};
 tabs();load();setInterval(load,60000);
 </script>
 </body>
