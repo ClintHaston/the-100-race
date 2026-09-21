@@ -79,10 +79,10 @@ tbody tr:nth-child(odd) td{background:#F6F8FB}
 .chip{border:2px solid var(--ink);background:#fff;border-radius:99px;padding:4px 12px;font-weight:700;cursor:pointer}
 .chip[aria-pressed=true]{background:var(--ink);color:#fff}
 .al{border-radius:12px;padding:14px;margin-top:12px;border:2px solid var(--line);background:#fff}
-.al.s-open{border-color:#EAB308;background:#FFFBEB}.al.s-blocked{background:#FEF2F2;border-color:#FECACA}.al.s-done{background:#F0FDF4;border-color:#BBF7D0}.al.s-skipped{background:#F8FAFC}
+.al.s-open{border-color:#EAB308;background:#FFFBEB}.al.s-blocked{background:#FEF2F2;border-color:#FECACA}.al.s-done{background:#F0FDF4;border-color:#BBF7D0}.al.s-skipped,.al.s-expired{background:#F8FAFC}
 .alh{display:flex;gap:8px;align-items:center}
 .stt{font:800 18px var(--cond);text-transform:uppercase;letter-spacing:.5px}
-.s-open .stt{color:#854D0E}.s-done .stt{color:#166534}.s-blocked .stt{color:#991B1B}.s-info .stt,.s-skipped .stt{color:#334155}
+.s-open .stt{color:#854D0E}.s-done .stt{color:#166534}.s-blocked .stt{color:#991B1B}.s-info .stt,.s-skipped .stt,.s-expired .stt{color:#334155}
 .who{color:var(--mu);font-size:13.5px}
 .alt{font-weight:700;font-size:17.5px;margin-top:8px;line-height:1.25}.als{color:#334155;font-size:14.5px;margin-top:3px}
 .lvls{margin-top:6px;font-size:14px;font-weight:600}
@@ -341,7 +341,7 @@ function flag(status){
   return `<svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true"><rect x="3" y="2" width="2.4" height="26" rx="1" fill="#475569"/><rect x="5" y="3" width="20" height="13" fill="${c}"/></svg>`;
 }
 function alerts(id,short){
-  const label={open:"Needs your call",done:"Done",skipped:"Skipped",blocked:"Blocked",info:"Report"};
+  const label={open:"Needs your call",done:"Done",skipped:"Skipped",blocked:"Blocked",info:"Report",expired:"Expired, not acted on"};
   let rows=D.alerts;
   if(short){const open=rows.filter(a=>a.status==="open");rows=open.concat(rows.filter(a=>a.status!=="open")).slice(0,5)}
   else if(alFilter!=="all")rows=rows.filter(a=>a.status===alFilter);
@@ -349,7 +349,7 @@ function alerts(id,short){
   $(id).innerHTML=rows.length?rows.map(a=>{
     const btn=a.status==="open"?(form?`<div class="btns"><a class="b1" target="_blank" rel="noopener" href="${esc(form.replace("ALERT_ID",a.id).replace("CHOICE","Done"))}">I did it</a><a class="b2" target="_blank" rel="noopener" href="${esc(form.replace("ALERT_ID",a.id).replace("CHOICE","Skipped"))}">Skip</a></div>`:`<p class="sub">Add your private form link under My trades to get the I did it and Skip buttons.</p>`):"";
     return `<div class="al s-${a.status}" id="a-${a.id}"><div class="alh">${flag(a.status)}<div><div class="stt">${label[a.status]||a.status}</div><div class="who">${a.lane==="ALL"?"Whole race":"Lane "+esc(a.lane.replace("_RH"," RH"))} · ${when(a.ts)}</div></div></div><div class="alt">${esc(a.title)}</div><div class="als">${esc(a.detail)}</div>${a.stop||a.tp?`<div class="lvls">Stop-loss ${esc(a.stop||"none")} · Take-profit ${esc(a.tp||"none")}</div>`:""}${btn}</div>`}).join(""):'<div class="empty">No alerts here.</div>';
-  if(!short){$("al-filter").innerHTML=[["all","All"],["open","Needs your call"],["done","Done"],["skipped","Skipped"],["blocked","Blocked"],["info","Reports"]].map(([k,l])=>`<button class="chip" data-k="${k}" aria-pressed="${alFilter===k}">${l}</button>`).join("");
+  if(!short){$("al-filter").innerHTML=[["all","All"],["open","Needs your call"],["done","Done"],["skipped","Skipped"],["blocked","Blocked"],["expired","Expired"],["info","Reports"]].map(([k,l])=>`<button class="chip" data-k="${k}" aria-pressed="${alFilter===k}">${l}</button>`).join("");
     $("al-filter").onclick=e=>{const b=e.target.closest(".chip");if(b){alFilter=b.dataset.k;alerts("al-full",false)}}}
 }
 function deck(id,limit){

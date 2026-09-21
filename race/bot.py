@@ -59,6 +59,9 @@ def main():
     news = News(health, cache, feed)
     ai = AI(cfg, health, cache)
     alerts = Alerts(cfg, health, log)
+    for a in log:
+        if a.get("status") == "open" and now_ts() - a["ts"] > 86400:
+            a["status"] = "expired"
 
     if st is None and os.environ.get("GITHUB_ACTIONS") and not os.environ.get("RACE_NEW_OK"):
         raise SystemExit("state.json is missing but this is not a first run. Refusing to reset the race.")
