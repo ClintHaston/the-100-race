@@ -63,13 +63,24 @@ def main():
         if a.get("status") == "open" and now_ts() - a["ts"] > 86400:
             a["status"] = "expired"
 
-    if st is None and os.environ.get("GITHUB_ACTIONS") and not os.environ.get("RACE_NEW_OK"):
+    restart = st is not None and cfg.get("race_id") and st.get("race_id") != cfg["race_id"]
+    if restart:
+        arch = os.path.join(DATA, "archive", st.get("race_id") or "first-race")
+        os.makedirs(arch, exist_ok=True)
+        for f in ("state.json", "alerts.json", "feed.json", "race.json"):
+            if os.path.exists(os.path.join(DATA, f)):
+                shutil.copy(os.path.join(DATA, f), os.path.join(arch, f))
+        st = None
+        log.clear(); feed.clear(); news.seen = set()
+    if st is None and not restart and os.environ.get("GITHUB_ACTIONS") and not os.environ.get("RACE_NEW_OK"):
         raise SystemExit("state.json is missing but this is not a first run. Refusing to reset the race.")
     if st is None:
         st = {"start": now_ts(), "lanes": {k: new_lane(cfg["start_cash"]) for k in cfg["lanes"]},
-              "bench": {k: new_lane(cfg["start_cash"]) for k in cfg["benchmarks"]}, "tables": {}, "risk_mode": {}}
+              "bench": {k: new_lane(cfg["start_cash"]) for k in cfg["benchmarks"]}, "tables": {}, "risk_mode": {},
+              "race_id": cfg.get("race_id")}
+        real = ", ".join(cfg["alert_lanes"]) if cfg["alert_mode"] == "signal" else "none"
         alerts.add("ALL", "info", "", "The $100 Race has started",
-                   f"{len(cfg['lanes']) - 1} lanes with $100 each, plus 2 benchmarks. Pretend money only.")
+                   f"Real-money signals: lane {real}. The other lanes run pretend money for comparison.")
         news.system("Race", "Race started. Every lane has $100 in pretend cash.")
     st.setdefault("tables", {})
     end = st["start"] + cfg["race_days"] * 86400

@@ -4,10 +4,6 @@
   "start_cash": 100.0,
   "alert_mode": "signal",
   "alert_lanes": [
-    "A",
-    "B",
-    "D",
-    "E",
     "F"
   ],
   "quiet_hours_et": [
@@ -113,5 +109,6 @@
     "lookback_days": 20,
     "top": 2,
     "note": "Funds, 10 stocks and 8 coins. Weekly on Mondays. No trend exit."
-  }
+  },
+  "race_id": "2026-09-21-real-money"
 }
