@@ -198,7 +198,7 @@ class Runner:
             if dollars < 1:
                 break
             daily_exit = lid in ("A", "B")
-            review = "reviewed each Monday" if lid == "F" else "reviewed each Sunday"
+            review = "checked every trading day" if lid in ("F", "G") else "reviewed each Sunday"
             px = buy(self.cfg, lid, L, s, dollars, quotes[s], f"{why_fmt} (ranked #{table[s]['rank']})",
                      stop=round(table[s]["ma"], 2) if daily_exit else None)
             if daily_exit:
@@ -206,19 +206,23 @@ class Runner:
             self.note_trade(lid, "buy", s, dollars, px, L["pos"][s]["why"],
                             stop=f"${table[s]['ma']:,.2f} trend line" if daily_exit else f"none, {review}", tp="none")
 
-    # ---- lane F: aggressive weekly momentum across funds, single stocks and coins
+    # ---- lanes F and G: aggressive momentum across funds, single stocks and coins
     def aggressive(self, daily, quotes):
-        if "F" not in self.st["lanes"]:
-            return
-        a = self.cfg["aggressive"]
         uni = sorted(set(self.cfg["rotation_universe"] + self.cfg["swing_universe"] + self.cfg["coins"]))
-        table = momentum_table(aligned_closes(daily, uni), look=a["lookback_days"])
-        self.st["tables"]["aggressive"] = table
-        L = self.lane("F"); now = et(); week = now.strftime("%G-%V")
-        if len(table) >= 10 and market_open() and now.hour >= 10 and L["sched"].get("week") != week:
-            L["sched"]["week"] = week
-            self._rebalance("F", L, table, quotes, top=a["top"],
-                            why_fmt=f"Top {a['top']} of {len(table)} on {a['lookback_days']}-day momentum")
+        closes = aligned_closes(daily, uni)
+        for lid, key in (("F", "aggressive"), ("G", "all_in")):
+            if lid not in self.st["lanes"] or key not in self.cfg:
+                continue
+            a = self.cfg[key]
+            table = momentum_table(closes, look=a["lookback_days"])
+            self.st["tables"][key] = table
+            L = self.lane(lid); now = et()
+            # Checked every trading day (backtest: held up far better in the latest year than Mondays only).
+            day_key = now.strftime("%Y-%m-%d") if a.get("check") == "daily" else now.strftime("%G-%V")
+            if len(table) >= 10 and market_open() and now.hour >= 10 and L["sched"].get("week") != day_key:
+                L["sched"]["week"] = day_key
+                self._rebalance(lid, L, table, quotes, top=a["top"],
+                                why_fmt=f"Top {a['top']} of {len(table)} on {a['lookback_days']}-day momentum")
 
     # ---- lane C: hourly breakout swing trades in stocks and funds
     def swing(self, hourly, quotes):
@@ -355,9 +359,9 @@ class Runner:
             for s in ranked:
                 ready = s in top
                 f_out.append({"symbol": s, "lanes": "F", "away": 0.0 if ready else None,
-                            "need": (f"Ranked #{agg[s]['rank']} of {len(agg)}, joins at the Monday check" if ready
+                            "need": (f"Ranked #{agg[s]['rank']} of {len(agg)}, joins at the next daily check" if ready
                                      else f"Ranked #{agg[s]['rank']} of {len(agg)}, up {agg[s]['mom'] * 100:.0f}% in 20 days"),
-                            "level": "Monday rotation"})
+                            "level": "Daily check"})
         b = coins.get("BTC")
         if b and "BTC" not in self.lane("D")["pos"]:
             px = quotes.get("BTC", {}).get("last", b["close"])

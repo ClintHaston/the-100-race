@@ -78,6 +78,11 @@ h2{font:700 21px/1.2 var(--display);letter-spacing:-.015em;margin:0 0 4px}
 .krc{display:inline-flex;align-items:center;gap:5px;font-size:13px;font-weight:700;color:var(--ink);text-decoration:none;background:var(--soft);border:1px solid var(--hair);padding:4px 10px;border-radius:99px;white-space:nowrap}
 .krc:hover{background:#EBEDF2}
 .sheet .btn.kr{margin:14px 0 4px}
+select{width:100%;padding:12px 14px;border:1.5px solid var(--hair);border-radius:12px;background:#fff;font:inherit}
+.row.tap{cursor:pointer}.row.tap:hover .nm{color:var(--violet)}
+.tot2{display:flex;align-items:baseline;gap:10px;margin:4px 0 6px}.tot2 b{font:700 30px/1.1 var(--display);letter-spacing:-.02em}
+.linkbtn{border:0;background:none;color:var(--violet);font-weight:700;cursor:pointer;padding:0}
+@media (max-width:900px){#other{order:4}}
 .install{display:none;margin-top:14px}.install.on{display:block}
 .steps{margin:10px 0 0;padding-left:20px;color:var(--ink2)}.steps li{margin:4px 0}
 .calmtext{font-size:17px;color:var(--ink2);margin:10px 0 0;max-width:40ch}
@@ -173,6 +178,7 @@ input:focus{border-color:var(--violet);outline:none}
       <div class="col">
         <div class="card hero" id="hero"></div>
         <div class="card" id="own"></div>
+        <div class="card" id="other"></div>
         <div class="card" id="nextin"></div>
       </div>
       <div class="col">
@@ -208,6 +214,13 @@ input:focus{border-color:var(--violet);outline:none}
   </div>
   <div class="acts"><button class="btn" id="sh-cancel">Not yet</button><button class="btn go" id="sh-save">Save to my Sheet</button></div>
 </div></div>
+<div class="scrim" id="hscrim" aria-hidden="true"><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="hs-t">
+  <h3 id="hs-t">Add a holding</h3><p>Only you see this. It stays on this device and isn't part of the $100 race.</p>
+  <label for="hs-sym">Coin or stock</label><select id="hs-sym"></select>
+  <div class="two"><div><label for="hs-units" id="hs-ul">How many you own</label><input id="hs-units" type="number" inputmode="decimal" step="any" min="0"></div>
+  <div><label for="hs-cost">What you paid in total (optional)</label><div class="pre"><span>$</span><input id="hs-cost" type="number" inputmode="decimal" step="any" min="0"></div></div></div>
+  <div class="acts"><button class="btn" id="hs-remove">Remove</button><button class="btn" id="hs-cancel">Cancel</button><button class="btn go" id="hs-save">Save</button></div>
+</div></div>
 <div class="toast" id="toast" role="status"></div>
 
 <script>
@@ -230,7 +243,9 @@ const av=s=>`<div class="av" style="background:${TINT[s]||"#5B35E8"}">${esc(s.le
 const COINS=["BTC","ETH","SOL","XRP","DOGE","AVAX","LINK","ADA"];
 const krakenWeb=s=>COINS.includes(s)?`https://pro.kraken.com/app/trade/${s.toLowerCase()}-usd`:`https://www.kraken.com/stocks/${s.toLowerCase()}`;
 const isAndroid=()=>/android/i.test(navigator.userAgent);
-const krakenLink=s=>isAndroid()?`intent:#Intent;action=android.intent.action.MAIN;category=android.intent.category.LAUNCHER;package=com.kraken.invest.app;S.browser_fallback_url=${encodeURIComponent(krakenWeb(s))};end`:krakenWeb(s);
+// On Android this Kraken link is claimed by the Kraken app, so it opens the app (tested on Clint's phone, Sep 21).
+const KRAKEN_APP="https://www.kraken.com/pay";
+const krakenLink=s=>isAndroid()?KRAKEN_APP:krakenWeb(s);
 const krChip=(s,label)=>`<a class="krc" href="${esc(krakenLink(s))}" ${isAndroid()?"":'target="_blank" rel="noopener"'} data-krchip="${esc(s)}">${esc(label||"Kraken")}${KR_ICON.replace('width="18" height="18"','width="13" height="13"')}</a>`;
 const KR_ICON=`<svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7"/><path d="M8 7h9v9"/></svg>`;
 let D={},drawn=false;
@@ -248,7 +263,17 @@ const myLanes=()=>cfg().alert_lanes||["F"];
 const sheetLink=()=>store.get("race_sheet")||cfg().sheet_link||"";
 const formLink=()=>store.get("race_form")||cfg().form_link||"";
 function logged(){let m={};try{m=JSON.parse(store.get("race_logged")||"{}")}catch(e){}for(const k in m)if(typeof m[k]==="string")m[k]={choice:m[k]};return m}
-function priceNow(sym){const r=(D.markets.rows||[]).find(x=>x.symbol===sym);return r?r.price:null}
+const KPAIR={BTC:"XXBTZUSD",ETH:"XETHZUSD",SOL:"SOLUSD",XRP:"XXRPZUSD",DOGE:"XDGUSD",AVAX:"AVAXUSD",LINK:"LINKUSD",ADA:"ADAUSD"};
+let LIVE={};
+async function livePrices(){
+  try{const r=await fetch("https://api.kraken.com/0/public/Ticker?pair="+Object.values(KPAIR).join(",")).then(r=>r.json());
+    for(const [s,k] of Object.entries(KPAIR)){const t=r.result&&r.result[k];if(t)LIVE[s]={price:+t.c[0],open:+t.o,at:Date.now()}}
+    if(D.race)render();
+  }catch(e){}
+}
+function priceNow(sym){if(LIVE[sym])return LIVE[sym].price;const r=((D.markets||{}).rows||[]).find(x=>x.symbol===sym);return r?r.price:null}
+function dayChange(sym){if(LIVE[sym]&&LIVE[sym].open)return (LIVE[sym].price/LIVE[sym].open-1)*100;const r=((D.markets||{}).rows||[]).find(x=>x.symbol===sym);return r&&r.change!=null?r.change:null}
+function others(){try{return JSON.parse(store.get("race_other")||"[]")}catch(e){return[]}}
 function sigPrice(a){if(a.price!=null)return a.price;const m=(a.detail||"").match(/Filled at \$([\d,.]+)/);return m?parseFloat(m[1].replace(/,/g,"")):null}
 function signals(){return (D.alerts||[]).filter(a=>(a.kind==="buy"||a.kind==="sell")&&myLanes().includes(a.lane))}
 function statusOf(a){const l=logged()[a.id];if(l)return l.choice==="Done"?"done":"skipped";return a.status==="info"?"done":a.status}
@@ -269,7 +294,7 @@ function render(){
   const H=D.health,age=(Date.now()/1000-H.updated)/3600;
   $("fresh").className="fresh"+(age>8?" warn":"");
   $("fresh").innerHTML=`<b></b><span>${age>8?"No update in "+Math.round(age)+" hours":"Updated "+ago(H.updated)}</span>`;
-  hero();todo();own();nextIn();compare("compare",true);heads();activity();lanesPage();settings();
+  hero();todo();own();other();nextIn();compare("compare",true);heads();activity();lanesPage();settings();
 }
 function hero(){
   const R=D.race,P=portfolio(),day=Math.min(30,Math.floor((Date.now()/1000-R.start)/86400)+1);
@@ -310,12 +335,12 @@ function chart(){
     const tip=$("tip");tip.style.left=(X(best[0])/W*100)+"%";tip.style.top=(Y(best[1])/H*r.height)+"px";tip.textContent=`${usd(best[1])} · ${ET(best[0],{weekday:"short",hour:"numeric",minute:"2-digit"})}`;tip.style.opacity=1};
   svg.onpointerleave=()=>{$("hx").setAttribute("visibility","hidden");$("hd").setAttribute("visibility","hidden");$("tip").style.opacity=0};
 }
-function nextCheck(){const n=(D.race.next_up||[]).find(x=>/lanes A, B and F|Weekly rotations/.test(x.what));return n?n.when.replace(" ET"," Eastern"):"Monday at 10:00 AM Eastern"}
+function nextCheck(){const n=(D.race.next_up||[]).find(x=>/Lane F daily/.test(x.what));return n?n.when.replace(" ET"," Eastern"):"at 10:00 AM Eastern on the next trading day"}
 function todo(){
   const open=signals().filter(a=>statusOf(a)==="open");
   const el=$("todo");el.className="card todo"+(open.length?"":" calm");
-  if(!open.length){el.innerHTML=`<h2>Nothing to do</h2><p class="calmtext">Lane F takes its next look ${esc(nextCheck())}. Your phone buzzes only if it wants you to buy or sell.</p>`;return}
-  el.innerHTML=`<h2>${open.length===1?"One thing to do":open.length+" things to do"}</h2><p class="sub">Place it on Kraken, then come back and tap I did it.</p>`+
+  if(!open.length){el.innerHTML=`<h2>Nothing to do</h2><p class="calmtext">Lane F decides again ${esc(nextCheck())}, and the app checks prices every 5 minutes. Your phone buzzes only when it's time to buy or sell.</p>`;return}
+  el.innerHTML=`<h2>${open.length===1?"One thing to do":open.length+" things to do"}</h2><p class="sub">${isAndroid()?"Buy on Kraken opens your Kraken app. Tap Home, pick the coin or stock, place it, then come back and tap I did it.":"Place it on Kraken, then come back and tap I did it."}</p>`+
   open.map(a=>`<div class="slip open" id="s-${a.id}"><div style="display:flex;gap:12px;align-items:center">${av(a.symbol)}<div><h3>${a.kind==="buy"?"Buy":"Sell"} ${esc(NAMES[a.symbol]||a.symbol)}</h3><p>${a.kind==="buy"&&a.dollars?usd(a.dollars)+" of "+esc(a.symbol)+" · ":""}signal price ${px(sigPrice(a))} · ${ago(a.ts)}</p></div></div>
     <a class="btn kr" href="${esc(krakenLink(a.symbol))}" ${isAndroid()?"":'target="_blank" rel="noopener"'} data-kraken="${a.id}">${KR_ICON}${a.kind==="buy"?"Buy":"Sell"} on Kraken</a>
     <div class="acts after"><button class="btn" data-skip="${a.id}">Skip</button><button class="btn go" data-log="${a.id}">I did it</button></div></div>`).join("");
@@ -325,9 +350,33 @@ function own(){
   $("own").innerHTML=`<h2>What you own</h2>`+(P.rows.length?P.rows.sort((a,b)=>b.value-a.value).map(r=>`<div class="row">${av(r.symbol)}<div><div class="nm">${esc(NAMES[r.symbol]||r.symbol)}</div><div class="dt">${+r.units.toPrecision(4)} ${esc(r.symbol)} · bought at ${px(r.avg)}${r.own?"":" (signal price)"}</div></div><div><div class="val">${usd(r.value)}</div><div class="chg ${cls(r.pnl)}">${signed(r.pnl)} · ${pct(r.pnl/r.cost*100)}</div><div style="text-align:right;margin-top:4px">${krChip(r.symbol,"Open in Kraken")}</div></div></div>`).join("")+(P.cash>0.009?`<div class="row"><div class="av" style="background:#9AA1AE">$</div><div><div class="nm">Cash</div><div class="dt">Waiting for the next buy signal</div></div><div class="val">${usd(P.cash)}</div></div>`:"")
     :`<p class="empty">Nothing yet. When you tap I did it on a buy, it shows up here with its live price.</p>`);
 }
+function other(){
+  const list=others().map(h=>{const p=priceNow(h.sym),v=p!=null?h.units*p:null;return{...h,p,v,day:dayChange(h.sym)}});
+  const total=list.reduce((t,h)=>t+(h.v||0),0),paid=list.reduce((t,h)=>t+(h.cost||0),0),hasCost=list.some(h=>h.cost);
+  if(!list.length){$("other").innerHTML=`<h2>Your XRP and other holdings</h2><p class="empty">Track coins you hold outside the race, like your XRP. Only you see it, it stays on this device, and it isn't counted in the $100.</p><div class="acts"><button class="btn go" data-hold-add="XRP">Add my XRP</button></div>`;return}
+  $("other").innerHTML=`<h2>Your XRP and other holdings</h2><p class="sub">Outside the race. Live Kraken prices, updated every minute.</p>
+    <div class="tot2"><b>${usd(total)}</b>${hasCost?`<span class="${cls(total-paid)}" style="font-weight:700">${signed(total-paid)} on what you paid</span>`:""}</div>`+
+    list.map((h,i)=>`<div class="row tap" data-hold-edit="${i}" title="Tap to edit">${av(h.sym)}<div><div class="nm">${esc(NAMES[h.sym]||h.sym)}</div><div class="dt">${(+h.units).toLocaleString("en-US",{maximumFractionDigits:6})} ${esc(h.sym)}${h.p!=null?" at "+px(h.p):""}${h.day!=null?` · <span class="${cls(h.day)}">${pct(h.day)} today</span>`:""}</div></div><div><div class="val">${h.v!=null?usd(h.v):"no price"}</div>${h.cost?`<div class="chg ${cls(h.v-h.cost)}">${signed(h.v-h.cost)} · ${pct((h.v-h.cost)/h.cost*100)}</div>`:""}<div style="text-align:right;margin-top:4px">${krChip(h.sym,"Open in Kraken")}</div></div></div>`).join("")+
+    `<div class="acts"><button class="btn" data-hold-add="">Add another</button></div>`;
+}
+let editing=null;
+function openHold(idx,sym){
+  const list=others(),h=idx!=null?list[idx]:{sym:sym||"XRP",units:"",cost:""};editing=idx;
+  $("hs-sym").innerHTML=Object.keys(NAMES).map(s=>`<option value="${s}" ${s===h.sym?"selected":""}>${esc(NAMES[s])} (${s})</option>`).join("");
+  $("hs-units").value=h.units;$("hs-cost").value=h.cost||"";$("hs-t").textContent=idx!=null?"Edit holding":"Add a holding";
+  $("hs-remove").style.display=idx!=null?"":"none";
+  $("hscrim").classList.add("on");$("hscrim").setAttribute("aria-hidden","false");setTimeout(()=>$("hs-units").focus(),60);
+}
+function closeHold(){$("hscrim").classList.remove("on");$("hscrim").setAttribute("aria-hidden","true");editing=null}
+$("hs-save").onclick=()=>{const units=parseFloat($("hs-units").value),cost=parseFloat($("hs-cost").value);if(!(units>0)){$("hs-units").focus();return}
+  const list=others(),rec={sym:$("hs-sym").value,units,cost:cost>0?cost:null};if(editing!=null)list[editing]=rec;else list.push(rec);
+  store.set("race_other",JSON.stringify(list));closeHold();render();toast("Saved on this device")};
+$("hs-remove").onclick=()=>{const list=others();if(editing!=null)list.splice(editing,1);store.set("race_other",JSON.stringify(list));closeHold();render();toast("Removed")};
+$("hs-cancel").onclick=closeHold;$("hscrim").onclick=e=>{if(e.target.id==="hscrim")closeHold()};
+document.addEventListener("click",e=>{if(e.target.closest("[data-krchip]"))return;const a=e.target.closest("[data-hold-add]");if(a){openHold(null,a.dataset.holdAdd||"BTC");return}const ed=e.target.closest("[data-hold-edit]");if(ed)openHold(+ed.dataset.holdEdit)});
 function nextIn(){
   const w=(D.watch||[]).filter(x=>x.lanes==="F"&&!portfolio().rows.some(r=>r.symbol===x.symbol)).slice(0,4);
-  $("nextin").innerHTML=`<h2>Next in line for lane F</h2><p class="sub">Ranked by 20-day momentum. Lane F swaps in the top 2 each Monday.</p>`+
+  $("nextin").innerHTML=`<h2>Next in line for lane F</h2><p class="sub">Ranked by 20-day momentum. Lane F holds the top 2 and can swap any trading day.</p>`+
    (w.length?w.map(x=>`<div class="row">${av(x.symbol)}<div><div class="nm">${esc(NAMES[x.symbol]||x.symbol)}</div><div class="dt">${esc(x.need)}</div></div><div><div class="val" style="font-size:15px">${priceNow(x.symbol)?px(priceNow(x.symbol)):""}</div><div style="text-align:right;margin-top:4px">${krChip(x.symbol)}</div></div></div>`).join("")
    :`<p class="empty">Your two holdings are still the top two. Nothing is knocking on the door.</p>`);
 }
@@ -358,7 +407,7 @@ function activity(){
   $("actside").innerHTML=`<h2>Your trade log</h2><p class="sub">Every I did it lands in your private Google Sheet with the price you entered.</p><div class="links">${sheetLink()?`<a class="lk" href="${esc(sheetLink())}" target="_blank" rel="noopener"><div>Open my Sheet<small>The $100 Race: my trades</small></div><span>Open</span></a>`:""}</div>`;
 }
 function lanesPage(){
-  const R=D.race,how={A:"Holds the 2 strongest of 7 funds and Bitcoin, checks the trend daily.",B:"Same as A, plus a news check before every buy.",C:"Fast trades on breakouts with stop-losses. Pretend only.",D:"Holds Bitcoin while it's trending up.",E:"Holds the 2 strongest of 8 coins, checks Sundays.",F:"Holds the 2 strongest of 24 funds, stocks and coins. Checks Mondays. This is yours."};
+  const R=D.race,how={A:"Holds the 2 strongest of 7 funds and Bitcoin, checks the trend daily.",B:"Same as A, plus a news check before every buy.",C:"Fast trades on breakouts with stop-losses. Pretend only.",D:"Holds Bitcoin while it's trending up.",E:"Holds the 2 strongest of 8 coins, checks Sundays.",F:"Holds the 2 strongest of 24 funds, stocks and coins. Can buy or sell any trading day. This is yours.",G:"All in on the single strongest of 24, by 10-day momentum. Checks every trading day. The swing-for-the-fences version."};
   const rows=R.lanes.filter(l=>!l.shadow).sort((a,b)=>b.value-a.value);
   $("lanesfull").innerHTML=`<h2>Every lane</h2><p class="sub">Pretend money, so you can see whether lane F's rules keep earning their spot.</p>`+rows.map(l=>`<div class="lp"><div class="av" style="background:${l.color}">${esc(l.id)}</div><div><div class="nm" style="font-weight:700">${esc(l.name)}${l.id==="F"?'<span class="you">you</span>':""}</div><div class="how">${esc(how[l.id]||"")}</div><div class="hold">${l.positions.length?"Holding "+l.positions.map(p=>p.symbol).join(" and "):"In cash"} · ${l.trade_count} closed trade${l.trade_count===1?"":"s"}</div></div><div style="text-align:right"><div class="val" style="font:700 18px var(--display)">${usd(l.value)}</div><div class="chg ${cls(l.value-100)}" style="font-weight:600;font-size:14px">${signed(l.value-100)}</div></div></div>`).join("");
   compare("lanechart",false);
@@ -373,7 +422,7 @@ function settings(){
   $("savelinks").onclick=()=>{store.set("race_sheet",$("in-sheet").value.trim());store.set("race_form",$("in-form").value.trim());toast("Saved on this device");render()};
   const bad=Object.entries(H).filter(([,v])=>!v.ok).length;
   $("sys").innerHTML=`<h2>Behind the scenes</h2><p class="sub">${bad?bad+" of "+Object.keys(H).length+" data sources need a look. The rest are fine.":"Every data source is working."} AI spend this month: ${usd(ai.cost||0)} of ${usd(D.race.ai_cap||4.5)}.</p><div class="health">${Object.entries(H).map(([k,v])=>`<div class="hl ${v.ok?"":"bad"}"><i></i>${esc(k)}<small>${v.ok?ago(v.at):"trouble"}</small></div>`).join("")}</div>`;
-  $("rules").innerHTML=installCard()+`<h2 style="margin-top:26px">How it runs</h2><dl class="facts"><dt>Your lane</dt><dd>Lane F, on Kraken</dd><dt>Alerts</dt><dd>Only when lane F wants you to buy or sell</dd><dt>Quiet hours</dt><dd>${c.quiet_hours_et[0]>12?c.quiet_hours_et[0]-12:c.quiet_hours_et[0]} PM to ${c.quiet_hours_et[1]} AM Eastern. Buys wait, sells always come through</dd><dt>Race length</dt><dd>${c.race_days} days</dd><dt>Crypto fee used</dt><dd>${(c.fees.kraken_limit*100).toFixed(2)}% (Kraken limit order)</dd><dt>Stocks</dt><dd>Commission-free on Kraken</dd><dt>Phone channel</dt><dd>ntfy app</dd></dl>`;
+  $("rules").innerHTML=installCard()+`<h2 style="margin-top:26px">How it runs</h2><dl class="facts"><dt>Your lane</dt><dd>Lane F, on Kraken</dd><dt>Alerts</dt><dd>Only when lane F wants you to buy or sell</dd><dt>Checks</dt><dd>Every 5 minutes. Lane F decides once each trading day at 10:00 AM Eastern</dd><dt>Quiet hours</dt><dd>${c.quiet_hours_et[0]>12?c.quiet_hours_et[0]-12:c.quiet_hours_et[0]} PM to ${c.quiet_hours_et[1]} AM Eastern. Buys wait, sells always come through</dd><dt>Race length</dt><dd>${c.race_days} days</dd><dt>Crypto fee used</dt><dd>${(c.fees.kraken_limit*100).toFixed(2)}% (Kraken limit order)</dd><dt>Stocks</dt><dd>Commission-free on Kraken</dd><dt>Phone channel</dt><dd>ntfy app</dd></dl>`;
 }
 
 /* ---------- install as an app ---------- */
@@ -397,7 +446,7 @@ function openSheet(id){
   const a=signals().find(x=>x.id===id);if(!a)return;
   cur=a;const buy=a.kind==="buy";
   $("sh-t").textContent=`${buy?"Buy":"Sell"} ${NAMES[a.symbol]||a.symbol}`;
-  $("sh-p").textContent=`Place it on Kraken, then enter what you actually ${buy?"paid":"got"}. The signal price was ${px(sigPrice(a))}.`;
+  $("sh-p").textContent=`${isAndroid()?`Open Kraken, tap Home, then ${a.symbol}.`:"Place it on Kraken,"} Then enter what you actually ${buy?"paid":"got"}. The signal price was ${px(sigPrice(a))}.`;
   $("sh-pl").textContent=buy?"Price you paid":"Price you sold at";
   $("sh-price").value=sigPrice(a)??"";$("sh-dol").value=a.dollars!=null?a.dollars.toFixed(2):"";
   $("sh-dl").textContent=buy?"Dollars you put in":"Dollars you got back";
@@ -425,7 +474,7 @@ $("sh-save").onclick=async()=>{
 };
 $("sh-cancel").onclick=closeSheet;
 $("scrim").onclick=e=>{if(e.target.id==="scrim")closeSheet()};
-document.addEventListener("keydown",e=>{if(e.key==="Escape"&&cur)closeSheet();if(e.key==="Enter"&&cur)$("sh-save").click()});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&editing!==undefined&&$("hscrim").classList.contains("on"))closeHold();if(e.key==="Escape"&&cur)closeSheet();if(e.key==="Enter"&&cur)$("sh-save").click()});
 document.addEventListener("click",async e=>{
   const l=e.target.closest("[data-log]");if(l){openSheet(l.dataset.log);return}
   const s=e.target.closest("[data-skip]");if(s){const a=signals().find(x=>x.id===s.dataset.skip);if(!a)return;s.disabled=true;
@@ -443,7 +492,7 @@ function tabs(){
 }
 function show(k,fromHash){if(!TABS.some(t=>t[0]===k))k="home";TABS.forEach(([t])=>{$("t-"+t).setAttribute("aria-selected",t===k);$("p-"+t).classList.toggle("on",t===k)});if(!fromHash)history.replaceState(null,"","#"+k);window.scrollTo({top:0})}
 let rz;addEventListener("resize",()=>{clearTimeout(rz);rz=setTimeout(()=>{if(D.race)chart()},150)});
-tabs();load();setInterval(load,60000);
+tabs();load();livePrices();setInterval(load,60000);setInterval(livePrices,60000);
 </script>
 </body>
 </html>

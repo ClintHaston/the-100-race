@@ -26,7 +26,8 @@ def next_up():
              (nxt(15, 45, range(5)), None, "Trend check for lanes A and B"),
              (nxt(17, 0, range(7)), None, "Daily recap alert"),
              (nxt(9, 0, [6]), None, "Weekly coin rotation (lane E)"),
-             (nxt(10, 0, [0]), None, "Weekly rotations (lanes A, B and F)")]
+             (nxt(10, 0, range(5)), None, "Lane F daily check: tells you what to buy or sell"),
+             (nxt(10, 0, [0]), None, "Weekly rotation (lanes A and B)")]
     out = []
     for when, label, what in items:
         if label is None:
@@ -84,6 +85,10 @@ def main():
                    f"Real-money signals: lane {real}. The other lanes run pretend money for comparison.")
         news.system("Race", "Race started. Every lane has $100 in pretend cash.")
     st.setdefault("tables", {})
+    for k in cfg["lanes"]:
+        if k not in st["lanes"]:
+            st["lanes"][k] = new_lane(cfg["start_cash"])
+            news.system(f"Lane {k}", f"Lane {k} joined the race with $100 in pretend cash.")
     end = st["start"] + cfg["race_days"] * 86400
     finished = now_ts() >= end
 
