@@ -1,6 +1,7 @@
 """Phone alerts through ntfy, quiet hours, daily recap, and optional status sync from a private Google Sheet."""
 import os, time, urllib.parse
 from .util import get, now_ts, et, uid
+from .market import is_coin
 
 
 class Alerts:
@@ -16,28 +17,36 @@ class Alerts:
         h = et().hour
         return h >= start or h < end
 
+    def wanted(self, lane, kind):
+        """Only real-money buy and sell signals are alerts. Everything else goes to the news feed."""
+        return kind in ("buy", "sell") and lane in self.cfg["alert_lanes"] and self.cfg["alert_mode"] == "signal"
+
     def add(self, lane, kind, sym, title, detail, dollars=None, stop=None, tp=None, push=True, urgent=False, price=None):
         a = {"id": uid(lane, kind, sym, now_ts()), "ts": now_ts(), "lane": lane, "kind": kind, "symbol": sym,
              "title": title, "detail": detail, "dollars": dollars, "stop": stop, "tp": tp, "price": price,
              "status": {"buy": "open", "sell": "open", "blocked": "blocked"}.get(kind, "info"),
              "mode": self.cfg["alert_mode"], "pushed": False}
-        if kind in ("buy", "sell") and (self.cfg["alert_mode"] == "report" or lane not in self.cfg["alert_lanes"]):
-            a["status"] = "info"
-            a["mode"] = "report"
+        if not self.wanted(lane, kind):
+            return a
         self.log.insert(0, a)
         del self.log[500:]
-        wanted = lane in self.cfg["alert_lanes"] or lane == "ALL"
-        if push and wanted and (urgent or kind == "sell" or not self.quiet()):
-            self._push(a, urgent or kind == "sell")
+        if push and (kind == "sell" or not self.quiet()):
+            self._push(a, kind == "sell")
         return a
 
     def flush_held(self):
         if self.quiet():
             return
         for a in reversed(self.log):
-            if not a["pushed"] and a["kind"] in ("buy", "blocked") and now_ts() - a["ts"] < 12 * 3600 \
-                    and (a["lane"] in self.cfg["alert_lanes"]):
+            if not a["pushed"] and a["kind"] == "buy" and a["status"] == "open" and now_ts() - a["ts"] < 12 * 3600:
                 self._push(a, False)
+
+    @staticmethod
+    def kraken_link(sym):
+        """Coins open Kraken Pro's trade screen; stocks open Kraken's stock page."""
+        if not sym:
+            return None
+        return f"https://pro.kraken.com/app/trade/{sym.lower()}-usd" if is_coin(sym) else f"https://www.kraken.com/stocks/{sym.lower()}"
 
     def _form_link(self, a, choice):
         if not self.form:
@@ -65,19 +74,16 @@ class Alerts:
         headers = {"Title": a["title"].encode("utf-8"), "Priority": "high" if urgent else "default",
                    "Tags": {"buy": "chart_with_upwards_trend", "sell": "chart_with_downwards_trend",
                             "blocked": "no_entry", "recap": "checkered_flag"}.get(a["kind"], "information_source")}
-        if self.dash:
-            headers["Click"] = f"{self.dash}#alerts"
         actions = []
-        if a["kind"] in ("buy", "sell") and a["mode"] == "signal":
-            for label, choice in (("I did it", "Done"), ("Skip", "Skipped")):
-                link = self.one_tap_link(a, choice)
-                if link:
-                    actions.append(f"http, {label}, {link}, method=POST, clear=true")
-                elif self._form_link(a, choice):
-                    actions.append(f"view, {label}, {self._form_link(a, choice)}")
-            edit = self._form_link(a, "Done")
-            if edit and self.one_tap_link(a, "Done"):
-                actions.append(f"view, Different price, {edit}")
+        kr = self.kraken_link(a.get("symbol"))
+        if kr:
+            actions.append(f"view, {'Buy' if a['kind'] == 'buy' else 'Sell'} on Kraken, {kr}")
+        if self.dash:
+            headers["Click"] = f"{self.dash}#log-{a['id']}"
+            actions.append(f"view, I did it, {self.dash}#log-{a['id']}, clear=true")
+        skip = self.one_tap_link(a, "Skipped")
+        if skip:
+            actions.append(f"http, Skip, {skip}, method=POST, clear=true")
         if actions:
             headers["Actions"] = "; ".join(actions)
         try:

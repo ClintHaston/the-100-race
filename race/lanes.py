@@ -348,13 +348,19 @@ class Runner:
                 out.append({"symbol": s, "lanes": "E", "need": "Close back above 50-day average", "level": f"${v['ma']:,.4g}", "away": max(0.0, (v["ma"] / px - 1) * 100)})
         agg = self.st["tables"].get("aggressive", {})
         if agg and "F" in self.st["lanes"]:
-            for s in pick_top(agg, self.cfg["aggressive"]["top"]):
-                if s not in self.lane("F")["pos"]:
-                    out.append({"symbol": s, "lanes": "F", "need": f"Qualifies now, ranked #{agg[s]['rank']} of {len(agg)}",
-                                "level": "Joins at Monday rotation", "away": 0.0})
+            top = pick_top(agg, self.cfg["aggressive"]["top"])
+            held = set(self.lane("F")["pos"])
+            ranked = [s for s in sorted(agg, key=lambda s: -agg[s]["mom"]) if s not in held and agg[s]["mom"] > 0][:4]
+            f_out = []
+            for s in ranked:
+                ready = s in top
+                f_out.append({"symbol": s, "lanes": "F", "away": 0.0 if ready else None,
+                            "need": (f"Ranked #{agg[s]['rank']} of {len(agg)}, joins at the Monday check" if ready
+                                     else f"Ranked #{agg[s]['rank']} of {len(agg)}, up {agg[s]['mom'] * 100:.0f}% in 20 days"),
+                            "level": "Monday rotation"})
         b = coins.get("BTC")
         if b and "BTC" not in self.lane("D")["pos"]:
             px = quotes.get("BTC", {}).get("last", b["close"])
             out.append({"symbol": "BTC", "lanes": "D", "need": "Close back above 50-day average", "level": f"${b['ma']:,.0f}", "away": max(0.0, (b["ma"] / px - 1) * 100)})
         out.sort(key=lambda x: (x["away"] is None, x["away"] if x["away"] is not None else 0))
-        return out[:10]
+        return out[:10] + (f_out if agg and "F" in self.st["lanes"] else [])

@@ -59,6 +59,7 @@ def main():
     news = News(health, cache, feed)
     ai = AI(cfg, health, cache)
     alerts = Alerts(cfg, health, log)
+    log[:] = [a for a in log if alerts.wanted(a.get("lane"), a.get("kind"))]
     for a in log:
         if a.get("status") == "open" and now_ts() - a["ts"] > 86400:
             a["status"] = "expired"
