@@ -1,5 +1,5 @@
 """Phone alerts through ntfy, quiet hours, daily recap, and optional status sync from a private Google Sheet."""
-import os, urllib.parse
+import os, time, urllib.parse
 from .util import get, now_ts, et, uid
 
 
@@ -16,9 +16,9 @@ class Alerts:
         h = et().hour
         return h >= start or h < end
 
-    def add(self, lane, kind, sym, title, detail, dollars=None, stop=None, tp=None, push=True, urgent=False):
+    def add(self, lane, kind, sym, title, detail, dollars=None, stop=None, tp=None, push=True, urgent=False, price=None):
         a = {"id": uid(lane, kind, sym, now_ts()), "ts": now_ts(), "lane": lane, "kind": kind, "symbol": sym,
-             "title": title, "detail": detail, "dollars": dollars, "stop": stop, "tp": tp,
+             "title": title, "detail": detail, "dollars": dollars, "stop": stop, "tp": tp, "price": price,
              "status": {"buy": "open", "sell": "open", "blocked": "blocked"}.get(kind, "info"),
              "mode": self.cfg["alert_mode"], "pushed": False}
         if kind in ("buy", "sell") and (self.cfg["alert_mode"] == "report" or lane not in self.cfg["alert_lanes"]):
@@ -44,6 +44,18 @@ class Alerts:
             return None
         return self.form.replace("ALERT_ID", a["id"]).replace("CHOICE", urllib.parse.quote(choice))
 
+    def one_tap_link(self, a, choice):
+        """A link that logs the trade in the Sheet with a single tap, no form to fill in."""
+        e = self.cfg.get("form_entries")
+        if not self.form or not e or "/viewform" not in self.form:
+            return None
+        base = self.form.split("/viewform")[0] + "/formResponse"
+        fields = {e["id"]: a["id"], e["choice"]: choice, e["platform"]: self.cfg.get("platform", ""),
+                  e["asset"]: a.get("symbol") or "", e["dollars"]: "" if a.get("dollars") is None else f"{a['dollars']:.2f}",
+                  e["price"]: "" if a.get("price") is None else f"{a['price']:.6g}",
+                  e["notes"]: f"{a['kind'].title()} logged with one tap. Price is the signal price; edit it here if yours differed."}
+        return base + "?" + urllib.parse.urlencode({f"entry.{k}": v for k, v in fields.items()})
+
     def _push(self, a, urgent):
         if not self.topic:
             return
@@ -58,9 +70,14 @@ class Alerts:
         actions = []
         if a["kind"] in ("buy", "sell") and a["mode"] == "signal":
             for label, choice in (("I did it", "Done"), ("Skip", "Skipped")):
-                link = self._form_link(a, choice)
+                link = self.one_tap_link(a, choice)
                 if link:
-                    actions.append(f"view, {label}, {link}")
+                    actions.append(f"http, {label}, {link}, method=POST, clear=true")
+                elif self._form_link(a, choice):
+                    actions.append(f"view, {label}, {self._form_link(a, choice)}")
+            edit = self._form_link(a, "Done")
+            if edit and self.one_tap_link(a, "Done"):
+                actions.append(f"view, Different price, {edit}")
         if actions:
             headers["Actions"] = "; ".join(actions)
         try:
@@ -76,7 +93,14 @@ class Alerts:
         if not self.status_url:
             return
         try:
-            rows = get(self.status_url)
+            for attempt in range(3):
+                try:
+                    rows = get(self.status_url)
+                    break
+                except Exception:
+                    if attempt == 2:
+                        raise
+                    time.sleep(3 * (attempt + 1))
             m = {r["id"]: r["status"] for r in rows if "id" in r}
             for a in self.log:
                 if a["id"] in m and a["status"] == "open":

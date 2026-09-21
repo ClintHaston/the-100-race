@@ -117,7 +117,7 @@ class Runner:
             detail = f"{reason}. Filled at ${price:,.2f}, result {'+' if pnl >= 0 else '-'}${abs(pnl):.2f}."
         shadow = self.cfg["lanes"][lid].get("shadow")
         if not shadow:
-            self.al.add(lid, kind, sym, title, detail, dollars=dollars, stop=stop, tp=tp)
+            self.al.add(lid, kind, sym, title, detail, dollars=dollars, stop=stop, tp=tp, price=price)
         msg = title.split(": ", 1)[1]
         self.news.system(f"Lane {disp}", msg[:1].upper() + msg[1:] + ". " + detail)
 

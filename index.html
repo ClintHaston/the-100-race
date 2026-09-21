@@ -86,7 +86,7 @@ tbody tr:nth-child(odd) td{background:#F6F8FB}
 .who{color:var(--mu);font-size:13.5px}
 .alt{font-weight:700;font-size:17.5px;margin-top:8px;line-height:1.25}.als{color:#334155;font-size:14.5px;margin-top:3px}
 .lvls{margin-top:6px;font-size:14px;font-weight:600}
-.btns{display:flex;gap:8px;margin-top:12px}.btns a{flex:1;text-align:center;padding:9px;border-radius:9px;font-weight:700;text-decoration:none}
+.btns{display:flex;gap:8px;margin:12px 0 6px}.btns a,.btns button{flex:1;text-align:center;padding:9px;border-radius:9px;font-weight:700;text-decoration:none;cursor:pointer;border:0}
 .b1{background:var(--ink);color:#fff}.b2{background:#fff;border:2px solid var(--ink);color:var(--ink)}
 .key{display:flex;gap:14px;flex-wrap:wrap;margin-top:2px;color:var(--mu);font-size:13.5px}.key span{display:flex;align-items:center;gap:5px}.key i{width:12px;height:9px;display:inline-block}
 .w8{padding:11px 0;border-bottom:1px solid var(--line)}
@@ -345,13 +345,27 @@ function alerts(id,short){
   let rows=D.alerts;
   if(short){const open=rows.filter(a=>a.status==="open");rows=open.concat(rows.filter(a=>a.status!=="open")).slice(0,5)}
   else if(alFilter!=="all")rows=rows.filter(a=>a.status===alFilter);
-  const form=store.get("race_form");
+  const form=store.get("race_form"),logged=loggedMap();
   $(id).innerHTML=rows.length?rows.map(a=>{
-    const btn=a.status==="open"?(form?`<div class="btns"><a class="b1" target="_blank" rel="noopener" href="${esc(form.replace("ALERT_ID",a.id).replace("CHOICE","Done"))}">I did it</a><a class="b2" target="_blank" rel="noopener" href="${esc(form.replace("ALERT_ID",a.id).replace("CHOICE","Skipped"))}">Skip</a></div>`:`<p class="sub">Add your private form link under My trades to get the I did it and Skip buttons.</p>`):"";
+    const st=a.status==="open"&&logged[a.id]?(logged[a.id]==="Done"?"done":"skipped"):a.status;
+    const btn=st==="open"?(form?`<div class="btns"><button class="b1" data-log="${a.id}" data-choice="Done">I did it</button><button class="b2" data-log="${a.id}" data-choice="Skipped">Skip</button></div><a class="sub" target="_blank" rel="noopener" href="${esc(form.replace("ALERT_ID",a.id).replace("CHOICE","Done"))}">Different price? Open the form</a>`:`<p class="sub">Add your private form link under My trades to get the I did it and Skip buttons.</p>`):logged[a.id]&&a.status==="open"?`<p class="sub">Logged to your Sheet. The race picks it up on its next check.</p>`:"";
+    a={...a,status:st};
     return `<div class="al s-${a.status}" id="a-${a.id}"><div class="alh">${flag(a.status)}<div><div class="stt">${label[a.status]||a.status}</div><div class="who">${a.lane==="ALL"?"Whole race":"Lane "+esc(a.lane.replace("_RH"," RH"))} · ${when(a.ts)}</div></div></div><div class="alt">${esc(a.title)}</div><div class="als">${esc(a.detail)}</div>${a.stop||a.tp?`<div class="lvls">Stop-loss ${esc(a.stop||"none")} · Take-profit ${esc(a.tp||"none")}</div>`:""}${btn}</div>`}).join(""):'<div class="empty">No alerts here.</div>';
   if(!short){$("al-filter").innerHTML=[["all","All"],["open","Needs your call"],["done","Done"],["skipped","Skipped"],["blocked","Blocked"],["expired","Expired"],["info","Reports"]].map(([k,l])=>`<button class="chip" data-k="${k}" aria-pressed="${alFilter===k}">${l}</button>`).join("");
     $("al-filter").onclick=e=>{const b=e.target.closest(".chip");if(b){alFilter=b.dataset.k;alerts("al-full",false)}}}
 }
+function loggedMap(){try{return JSON.parse(store.get("race_logged")||"{}")}catch(e){return{}}}
+async function logTrade(idv,choice,btn){
+  const a=D.alerts.find(x=>x.id===idv),form=store.get("race_form"),e=D.config.form_entries;
+  if(!a||!form||!e||!form.includes("/viewform")){alert("Save your private form link under My trades first.");return}
+  const f={[e.id]:a.id,[e.choice]:choice,[e.platform]:D.config.platform||"",[e.asset]:a.symbol||"",[e.dollars]:a.dollars!=null?a.dollars.toFixed(2):"",
+    [e.price]:a.price!=null?String(+a.price.toPrecision(6)):"",[e.notes]:`${(a.kind||"trade").replace(/^./,c=>c.toUpperCase())} logged with one tap from the dashboard. Price is the signal price; edit it here if yours differed.`};
+  const url=form.split("/viewform")[0]+"/formResponse?"+new URLSearchParams(Object.entries(f).map(([k,v])=>["entry."+k,v])).toString();
+  btn.disabled=true;btn.textContent="Logging...";
+  try{await fetch(url,{method:"POST",mode:"no-cors"});const m=loggedMap();m[idv]=choice;store.set("race_logged",JSON.stringify(m));alerts("al-short",true);alerts("al-full",false)}
+  catch(err){btn.disabled=false;btn.textContent=choice==="Done"?"I did it":"Skip";alert("Could not reach your form. Check your connection and try again.")}
+}
+document.addEventListener("click",e=>{const b=e.target.closest("[data-log]");if(b)logTrade(b.dataset.log,b.dataset.choice,b)});
 function deck(id,limit){
   const rows=(D.watch||[]).slice(0,limit);
   $(id).innerHTML=rows.length?rows.map(w=>{const ready=w.away===0,fill=w.away==null?35:ready?100:Math.max(6,100-w.away*20);

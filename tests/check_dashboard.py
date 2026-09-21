@@ -51,11 +51,18 @@ with sync_playwright() as p:
         check(f"{label}: private links save on this device", "Open my private trade sheet" in pg.inner_text("#mine-link"))
         pg.click("#t-alerts")
         opens = pg.locator("#al-full .s-open").count()
-        btns = pg.locator("#al-full .s-open .btns a").count()
+        btns = pg.locator("#al-full .s-open .btns button").count()
         check(f"{label}: open alerts get I did it and Skip buttons", opens == 0 or btns == opens * 2, f"{opens} open, {btns} buttons")
         if btns:
-            href = pg.locator("#al-full .s-open .btns a").first.get_attribute("href")
-            check(f"{label}: button link carries the alert id", "ALERT_ID" not in href and "Done" in href, href[-40:])
+            sent = []
+            pg.route("**/formResponse*", lambda route: (sent.append(route.request.url), route.fulfill(status=200, body="ok")))
+            first = pg.locator("#al-full .s-open").first
+            aid = first.get_attribute("id")[2:]
+            first.locator("button[data-choice=Done]").click()
+            pg.wait_for_timeout(800)
+            check(f"{label}: one tap sends the trade to the form", len(sent) == 1 and aid in sent[0] and "Done" in sent[0], sent[0][-60:] if sent else "nothing sent")
+            check(f"{label}: tapped alert shows as Done right away", pg.locator(f"#a-{aid}.s-done").count() >= 1)
+            check(f"{label}: amount, asset and platform are filled in", sent and "Kraken" in sent[0] and "entry.1234101252=" in sent[0])
         pg.reload(); pg.wait_for_selector("#track svg", state="attached")
         check(f"{label}: reload reopens the same tab", pg.locator("#p-alerts").is_visible())
         pg.click("#t-race")

@@ -110,5 +110,15 @@
     "top": 2,
     "note": "Funds, 10 stocks and 8 coins. Weekly on Mondays. No trend exit."
   },
-  "race_id": "2026-09-21-real-money"
+  "race_id": "2026-09-21-real-money",
+  "platform": "Kraken",
+  "form_entries": {
+    "id": "793811518",
+    "choice": "2095530",
+    "platform": "1149483914",
+    "asset": "1234101252",
+    "dollars": "1171972350",
+    "price": "314751910",
+    "notes": "748139022"
+  }
 }
