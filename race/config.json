@@ -4,7 +4,7 @@
   "start_cash": 100.0,
   "alert_mode": "signal",
   "alert_lanes": [
-    "F"
+    "G"
   ],
   "quiet_hours_et": [
     22,
@@ -134,5 +134,12 @@
     "top": 1,
     "check": "daily",
     "note": "All $100 in the single strongest of 24 on 10-day momentum. Checks every trading day."
+  },
+  "past_alert_lanes": [
+    "F"
+  ],
+  "handoff": {
+    "from": "F",
+    "to": "G"
   }
 }

@@ -21,6 +21,22 @@ class Alerts:
         """Only real-money buy and sell signals are alerts. Everything else goes to the news feed."""
         return kind in ("buy", "sell") and lane in self.cfg["alert_lanes"] and self.cfg["alert_mode"] == "signal"
 
+    def keep(self, lane, kind):
+        """Signals from the current or a past real-money lane stay in the log, so your holdings stay correct."""
+        return kind in ("buy", "sell") and lane in self.cfg["alert_lanes"] + self.cfg.get("past_alert_lanes", [])
+
+    def real_holdings(self):
+        """What you actually own, from the buys and sells you marked done."""
+        held = {}
+        for a in sorted(self.log, key=lambda a: a["ts"]):
+            if a.get("status") != "done" or not self.keep(a["lane"], a["kind"]):
+                continue
+            if a["kind"] == "buy":
+                held[a["symbol"]] = held.get(a["symbol"], 0) + (a.get("dollars") or 0)
+            elif a["kind"] == "sell":
+                held.pop(a["symbol"], None)
+        return held
+
     def add(self, lane, kind, sym, title, detail, dollars=None, stop=None, tp=None, push=True, urgent=False, price=None):
         a = {"id": uid(lane, kind, sym, now_ts()), "ts": now_ts(), "lane": lane, "kind": kind, "symbol": sym,
              "title": title, "detail": detail, "dollars": dollars, "stop": stop, "tp": tp, "price": price,

@@ -221,8 +221,24 @@ class Runner:
             day_key = now.strftime("%Y-%m-%d") if a.get("check") == "daily" else now.strftime("%G-%V")
             if len(table) >= 10 and market_open() and now.hour >= 10 and L["sched"].get("week") != day_key:
                 L["sched"]["week"] = day_key
+                self.handoff(lid, pick_top(table, a["top"]), quotes)
                 self._rebalance(lid, L, table, quotes, top=a["top"],
                                 why_fmt=f"Top {a['top']} of {len(table)} on {a['lookback_days']}-day momentum")
+
+    def handoff(self, lid, picks, quotes):
+        """One time, when your real money moves to a new lane: sell what the old lane had you buy."""
+        h = self.cfg.get("handoff")
+        if not h or h.get("to") != lid or self.st.get("handoff_done") == f"{h['from']}->{lid}":
+            return
+        self.st["handoff_done"] = f"{h['from']}->{lid}"
+        for sym, dollars in self.al.real_holdings().items():
+            if sym in picks or sym not in quotes:
+                continue
+            px = quotes[sym]["bid"]
+            self.al.add(lid, "sell", sym, f"Lane {lid}: rules say sell {sym}",
+                        f"Switching your money from lane {h['from']} to lane {lid}. Sell all of it. Price was ${px:,.2f}.",
+                        dollars=dollars, price=px)
+            self.news.system(f"Lane {lid}", f"Switch from lane {h['from']}: sell {sym}")
 
     # ---- lane C: hourly breakout swing trades in stocks and funds
     def swing(self, hourly, quotes):
@@ -350,21 +366,23 @@ class Runner:
                 out.append({"symbol": s, "lanes": "E", "need": f"Qualifies now, ranked #{v['rank']}", "level": "Joins at Sunday rotation", "away": 0.0})
             elif not v["trend_up"] and v["mom"] > 0:
                 out.append({"symbol": s, "lanes": "E", "need": "Close back above 50-day average", "level": f"${v['ma']:,.4g}", "away": max(0.0, (v["ma"] / px - 1) * 100)})
-        agg = self.st["tables"].get("aggressive", {})
-        if agg and "F" in self.st["lanes"]:
-            top = pick_top(agg, self.cfg["aggressive"]["top"])
-            held = set(self.lane("F")["pos"])
+        real = (self.cfg["alert_lanes"] or ["F"])[0]
+        key = "all_in" if real == "G" else "aggressive"
+        agg = self.st["tables"].get(key, {})
+        if agg and real in self.st["lanes"] and key in self.cfg:
+            top = pick_top(agg, self.cfg[key]["top"])
+            held = set(self.lane(real)["pos"])
             ranked = [s for s in sorted(agg, key=lambda s: -agg[s]["mom"]) if s not in held and agg[s]["mom"] > 0][:4]
             f_out = []
             for s in ranked:
                 ready = s in top
-                f_out.append({"symbol": s, "lanes": "F", "away": 0.0 if ready else None,
+                f_out.append({"symbol": s, "lanes": real, "away": 0.0 if ready else None,
                             "need": (f"Ranked #{agg[s]['rank']} of {len(agg)}, joins at the next daily check" if ready
-                                     else f"Ranked #{agg[s]['rank']} of {len(agg)}, up {agg[s]['mom'] * 100:.0f}% in 20 days"),
+                                     else f"Ranked #{agg[s]['rank']} of {len(agg)}, up {agg[s]['mom'] * 100:.0f}% in {self.cfg[key]['lookback_days']} days"),
                             "level": "Daily check"})
         b = coins.get("BTC")
         if b and "BTC" not in self.lane("D")["pos"]:
             px = quotes.get("BTC", {}).get("last", b["close"])
             out.append({"symbol": "BTC", "lanes": "D", "need": "Close back above 50-day average", "level": f"${b['ma']:,.0f}", "away": max(0.0, (b["ma"] / px - 1) * 100)})
         out.sort(key=lambda x: (x["away"] is None, x["away"] if x["away"] is not None else 0))
-        return out[:10] + (f_out if agg and "F" in self.st["lanes"] else [])
+        return out[:10] + (f_out if agg and real in self.st["lanes"] and key in self.cfg else [])

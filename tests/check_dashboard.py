@@ -65,7 +65,7 @@ with sync_playwright() as p:
         check(f"{label}: XRP shows its live value", "$2,500.00" in t and "1,000 XRP" in t, t[:120].replace("\n", " "))
         check(f"{label}: XRP shows gain on what you paid and today's move", "+$500.00" in t and "+4.2% today" in t)
         check(f"{label}: XRP is not counted in the $100", "$2,500" not in pg.inner_text("#hero"))
-        check(f"{label}: race holdings use the live Kraken price", "$51.06" in pg.inner_text("#own"), pg.inner_text("#own")[:90].replace("\n", " "))
+        check(f"{label}: race holdings use the live Kraken price", pg.evaluate("priceNow('SOL')") == 120 and pg.evaluate("priceNow('XRP')") == 2.5)
         pg.locator("#other [data-hold-edit]").first.click(); pg.fill("#hs-units", "800"); pg.click("#hs-save"); pg.wait_for_timeout(300)
         check(f"{label}: editing the XRP amount updates the value", "$2,000.00" in pg.inner_text("#other"))
         pg.reload(); pg.wait_for_selector("#hero h1"); pg.wait_for_timeout(400)

@@ -259,7 +259,8 @@ async function load(){
   }catch(e){$("error").innerHTML=`<div class="err">Can't reach the race data right now (${esc(e.message)}). It usually means the first check hasn't run yet. Try again in a few minutes.</div>`}
 }
 const cfg=()=>D.config||{};
-const myLanes=()=>cfg().alert_lanes||["F"];
+const myLanes=()=>(cfg().alert_lanes||["F"]).concat(cfg().past_alert_lanes||[]);
+const YOU=()=>(cfg().alert_lanes||["F"])[0];
 const sheetLink=()=>store.get("race_sheet")||cfg().sheet_link||"";
 const formLink=()=>store.get("race_form")||cfg().form_link||"";
 function logged(){let m={};try{m=JSON.parse(store.get("race_logged")||"{}")}catch(e){}for(const k in m)if(typeof m[k]==="string")m[k]={choice:m[k]};return m}
@@ -306,12 +307,12 @@ function hero(){
     <h1>Your $100 is worth <span class="n" id="bign">${usd(P.total)}</span></h1>
     <p class="say">${mood}. ${spyTxt}</p>
     <div class="chart" id="chart"></div>
-    <div class="key"><span><i style="background:var(--violet)"></i>Lane F, the lane you follow</span><span><i style="background:repeating-linear-gradient(90deg,#9AA1AE 0 4px,transparent 4px 7px)"></i>Just holding the S&amp;P 500</span></div>
+    <div class="key"><span><i style="background:var(--violet)"></i>Lane ${esc(YOU())}, the lane you follow</span><span><i style="background:repeating-linear-gradient(90deg,#9AA1AE 0 4px,transparent 4px 7px)"></i>Just holding the S&amp;P 500</span></div>
     <div class="money"><div><small>Put in</small><b>${usd(P.start)}</b></div><div><small>Invested now</small><b>${usd(P.invested)}</b></div><div><small>Cash left</small><b>${usd(P.cash)}</b></div><div><small>Profit</small><b class="${cls(d)}">${signed(d)}</b></div></div>`;
   chart();
 }
 function chart(){
-  const R=D.race,F=R.lanes.find(l=>l.id==="F"),S=R.bench.find(b=>b.id==="SPY");
+  const R=D.race,F=R.lanes.find(l=>l.id===YOU())||R.lanes.find(l=>l.id==="F"),S=R.bench.find(b=>b.id==="SPY");
   const series=[[F,"var(--violet)",false],[S,"#9AA1AE",true]].filter(s=>s[0]&&s[0].history.length);
   const W=Math.max(320,Math.round(($("chart").clientWidth||720))),H=W<500?190:210,PL=46,PB=26,pts=series.flatMap(s=>s[0].history);
   if(!series.length||series[0][0].history.length<3){$("chart").innerHTML=`<p class="sub" style="padding:34px 8px 20px">Your line starts drawing after a few checks. Give it a day.</p>`;return}
@@ -335,11 +336,11 @@ function chart(){
     const tip=$("tip");tip.style.left=(X(best[0])/W*100)+"%";tip.style.top=(Y(best[1])/H*r.height)+"px";tip.textContent=`${usd(best[1])} · ${ET(best[0],{weekday:"short",hour:"numeric",minute:"2-digit"})}`;tip.style.opacity=1};
   svg.onpointerleave=()=>{$("hx").setAttribute("visibility","hidden");$("hd").setAttribute("visibility","hidden");$("tip").style.opacity=0};
 }
-function nextCheck(){const n=(D.race.next_up||[]).find(x=>/Lane F daily/.test(x.what));return n?n.when.replace(" ET"," Eastern"):"at 10:00 AM Eastern on the next trading day"}
+function nextCheck(){const n=(D.race.next_up||[]).find(x=>/Lane F daily|lanes F and G/.test(x.what));return n?n.when.replace(" ET"," Eastern"):"at 10:00 AM Eastern on the next trading day"}
 function todo(){
-  const open=signals().filter(a=>statusOf(a)==="open");
+  const open=signals().filter(a=>statusOf(a)==="open").sort((a,b)=>(a.kind===b.kind?a.ts-b.ts:a.kind==="sell"?-1:1));
   const el=$("todo");el.className="card todo"+(open.length?"":" calm");
-  if(!open.length){el.innerHTML=`<h2>Nothing to do</h2><p class="calmtext">Lane F decides again ${esc(nextCheck())}, and the app checks prices every 5 minutes. Your phone buzzes only when it's time to buy or sell.</p>`;return}
+  if(!open.length){el.innerHTML=`<h2>Nothing to do</h2><p class="calmtext">Lane ${esc(YOU())} decides again ${esc(nextCheck())}, and the app checks prices every 5 minutes. Your phone buzzes only when it's time to buy or sell.</p>`;return}
   el.innerHTML=`<h2>${open.length===1?"One thing to do":open.length+" things to do"}</h2><p class="sub">${isAndroid()?"Buy on Kraken opens your Kraken app. Tap Home, pick the coin or stock, place it, then come back and tap I did it.":"Place it on Kraken, then come back and tap I did it."}</p>`+
   open.map(a=>`<div class="slip open" id="s-${a.id}"><div style="display:flex;gap:12px;align-items:center">${av(a.symbol)}<div><h3>${a.kind==="buy"?"Buy":"Sell"} ${esc(NAMES[a.symbol]||a.symbol)}</h3><p>${a.kind==="buy"&&a.dollars?usd(a.dollars)+" of "+esc(a.symbol)+" · ":""}signal price ${px(sigPrice(a))} · ${ago(a.ts)}</p></div></div>
     <a class="btn kr" href="${esc(krakenLink(a.symbol))}" ${isAndroid()?"":'target="_blank" rel="noopener"'} data-kraken="${a.id}">${KR_ICON}${a.kind==="buy"?"Buy":"Sell"} on Kraken</a>
@@ -375,8 +376,9 @@ $("hs-remove").onclick=()=>{const list=others();if(editing!=null)list.splice(edi
 $("hs-cancel").onclick=closeHold;$("hscrim").onclick=e=>{if(e.target.id==="hscrim")closeHold()};
 document.addEventListener("click",e=>{if(e.target.closest("[data-krchip]"))return;const a=e.target.closest("[data-hold-add]");if(a){openHold(null,a.dataset.holdAdd||"BTC");return}const ed=e.target.closest("[data-hold-edit]");if(ed)openHold(+ed.dataset.holdEdit)});
 function nextIn(){
-  const w=(D.watch||[]).filter(x=>x.lanes==="F"&&!portfolio().rows.some(r=>r.symbol===x.symbol)).slice(0,4);
-  $("nextin").innerHTML=`<h2>Next in line for lane F</h2><p class="sub">Ranked by 20-day momentum. Lane F holds the top 2 and can swap any trading day.</p>`+
+  const you=YOU(),w=(D.watch||[]).filter(x=>x.lanes===you&&!portfolio().rows.some(r=>r.symbol===x.symbol)).slice(0,4);
+  const how=you==="G"?"Ranked by 10-day momentum. Lane G goes all in on the top pick and can swap any trading day.":"Ranked by 20-day momentum. Lane F holds the top 2 and can swap any trading day.";
+  $("nextin").innerHTML=`<h2>Next in line for lane ${esc(you)}</h2><p class="sub">${how}</p>`+
    (w.length?w.map(x=>`<div class="row">${av(x.symbol)}<div><div class="nm">${esc(NAMES[x.symbol]||x.symbol)}</div><div class="dt">${esc(x.need)}</div></div><div><div class="val" style="font-size:15px">${priceNow(x.symbol)?px(priceNow(x.symbol)):""}</div><div style="text-align:right;margin-top:4px">${krChip(x.symbol)}</div></div></div>`).join("")
    :`<p class="empty">Your two holdings are still the top two. Nothing is knocking on the door.</p>`);
 }
@@ -385,7 +387,7 @@ function compare(id,short){
   const span=Math.max(2,...rows.map(r=>Math.abs(r.value-100)))*1.1;
   $(id).innerHTML=`<h2>How the lanes compare</h2><p class="sub">Every lane got $100 of pretend money on day one.</p><div style="margin-top:12px">`+rows.map(r=>{
     const d=r.value-100,w=Math.abs(d)/span*50;
-    return `<div class="lane${r.id==="F"?" me":""}"><div class="ln" title="${esc(r.name)}">${r.bench?esc(r.name):"Lane "+esc(r.id)}${r.id==="F"?'<span class="you">you</span>':""}</div><div class="track"><span class="mid"></span><span class="bar" style="${d>=0?"left:50%":"right:50%"};width:${w}%;background:${r.id==="F"?"var(--violet)":d>=0?"#7FCFA8":"#EDA39E"}"></span></div><div class="v ${cls(d)}">${usd(r.value)}</div></div>`}).join("")+`</div>`;
+    return `<div class="lane${r.id===YOU()?" me":""}"><div class="ln" title="${esc(r.name)}">${r.bench?esc(r.name):"Lane "+esc(r.id)}${r.id===YOU()?'<span class="you">you</span>':""}</div><div class="track"><span class="mid"></span><span class="bar" style="${d>=0?"left:50%":"right:50%"};width:${w}%;background:${r.id===YOU()?"var(--violet)":d>=0?"#7FCFA8":"#EDA39E"}"></span></div><div class="v ${cls(d)}">${usd(r.value)}</div></div>`}).join("")+`</div>`;
 }
 function heads(){
   const own=portfolio().rows.map(r=>r.symbol);
@@ -398,7 +400,7 @@ function heads(){
 function activity(){
   const L=logged(),rows=signals();
   const words={done:"You did it",open:"Waiting on you",skipped:"Skipped",expired:"Expired"};
-  let out=`<h2>Your signals</h2><p class="sub">Every buy and sell lane F has sent you.</p>`,last="";
+  let out=`<h2>Your signals</h2><p class="sub">Every buy and sell your lane has sent you.</p>`,last="";
   if(!rows.length)out+=`<p class="empty">No signals yet.</p>`;
   rows.forEach(a=>{const d=ET(a.ts,{weekday:"long",month:"short",day:"numeric"});if(d!==last){out+=`<div class="day">${esc(d)}</div>`;last=d}
     const st=statusOf(a),l=L[a.id]||{};
@@ -407,9 +409,9 @@ function activity(){
   $("actside").innerHTML=`<h2>Your trade log</h2><p class="sub">Every I did it lands in your private Google Sheet with the price you entered.</p><div class="links">${sheetLink()?`<a class="lk" href="${esc(sheetLink())}" target="_blank" rel="noopener"><div>Open my Sheet<small>The $100 Race: my trades</small></div><span>Open</span></a>`:""}</div>`;
 }
 function lanesPage(){
-  const R=D.race,how={A:"Holds the 2 strongest of 7 funds and Bitcoin, checks the trend daily.",B:"Same as A, plus a news check before every buy.",C:"Fast trades on breakouts with stop-losses. Pretend only.",D:"Holds Bitcoin while it's trending up.",E:"Holds the 2 strongest of 8 coins, checks Sundays.",F:"Holds the 2 strongest of 24 funds, stocks and coins. Can buy or sell any trading day. This is yours.",G:"All in on the single strongest of 24, by 10-day momentum. Checks every trading day. The swing-for-the-fences version."};
+  const R=D.race,how={A:"Holds the 2 strongest of 7 funds and Bitcoin, checks the trend daily.",B:"Same as A, plus a news check before every buy.",C:"Fast trades on breakouts with stop-losses. Pretend only.",D:"Holds Bitcoin while it's trending up.",E:"Holds the 2 strongest of 8 coins, checks Sundays.",F:"Holds the 2 strongest of 24 funds, stocks and coins. Can buy or sell any trading day.",G:"All in on the single strongest of 24, by 10-day momentum. Checks every trading day. The swing-for-the-fences version."};
   const rows=R.lanes.filter(l=>!l.shadow).sort((a,b)=>b.value-a.value);
-  $("lanesfull").innerHTML=`<h2>Every lane</h2><p class="sub">Pretend money, so you can see whether lane F's rules keep earning their spot.</p>`+rows.map(l=>`<div class="lp"><div class="av" style="background:${l.color}">${esc(l.id)}</div><div><div class="nm" style="font-weight:700">${esc(l.name)}${l.id==="F"?'<span class="you">you</span>':""}</div><div class="how">${esc(how[l.id]||"")}</div><div class="hold">${l.positions.length?"Holding "+l.positions.map(p=>p.symbol).join(" and "):"In cash"} · ${l.trade_count} closed trade${l.trade_count===1?"":"s"}</div></div><div style="text-align:right"><div class="val" style="font:700 18px var(--display)">${usd(l.value)}</div><div class="chg ${cls(l.value-100)}" style="font-weight:600;font-size:14px">${signed(l.value-100)}</div></div></div>`).join("");
+  $("lanesfull").innerHTML=`<h2>Every lane</h2><p class="sub">Pretend money, so you can see whether lane F's rules keep earning their spot.</p>`+rows.map(l=>`<div class="lp"><div class="av" style="background:${l.color}">${esc(l.id)}</div><div><div class="nm" style="font-weight:700">${esc(l.name)}${l.id===YOU()?'<span class="you">you</span>':""}</div><div class="how">${esc(how[l.id]||"")}</div><div class="hold">${l.positions.length?"Holding "+l.positions.map(p=>p.symbol).join(" and "):"In cash"} · ${l.trade_count} closed trade${l.trade_count===1?"":"s"}</div></div><div style="text-align:right"><div class="val" style="font:700 18px var(--display)">${usd(l.value)}</div><div class="chg ${cls(l.value-100)}" style="font-weight:600;font-size:14px">${signed(l.value-100)}</div></div></div>`).join("");
   compare("lanechart",false);
 }
 function settings(){
@@ -422,7 +424,7 @@ function settings(){
   $("savelinks").onclick=()=>{store.set("race_sheet",$("in-sheet").value.trim());store.set("race_form",$("in-form").value.trim());toast("Saved on this device");render()};
   const bad=Object.entries(H).filter(([,v])=>!v.ok).length;
   $("sys").innerHTML=`<h2>Behind the scenes</h2><p class="sub">${bad?bad+" of "+Object.keys(H).length+" data sources need a look. The rest are fine.":"Every data source is working."} AI spend this month: ${usd(ai.cost||0)} of ${usd(D.race.ai_cap||4.5)}.</p><div class="health">${Object.entries(H).map(([k,v])=>`<div class="hl ${v.ok?"":"bad"}"><i></i>${esc(k)}<small>${v.ok?ago(v.at):"trouble"}</small></div>`).join("")}</div>`;
-  $("rules").innerHTML=installCard()+`<h2 style="margin-top:26px">How it runs</h2><dl class="facts"><dt>Your lane</dt><dd>Lane F, on Kraken</dd><dt>Alerts</dt><dd>Only when lane F wants you to buy or sell</dd><dt>Checks</dt><dd>Every 5 minutes. Lane F decides once each trading day at 10:00 AM Eastern</dd><dt>Quiet hours</dt><dd>${c.quiet_hours_et[0]>12?c.quiet_hours_et[0]-12:c.quiet_hours_et[0]} PM to ${c.quiet_hours_et[1]} AM Eastern. Buys wait, sells always come through</dd><dt>Race length</dt><dd>${c.race_days} days</dd><dt>Crypto fee used</dt><dd>${(c.fees.kraken_limit*100).toFixed(2)}% (Kraken limit order)</dd><dt>Stocks</dt><dd>Commission-free on Kraken</dd><dt>Phone channel</dt><dd>ntfy app</dd></dl>`;
+  $("rules").innerHTML=installCard()+`<h2 style="margin-top:26px">How it runs</h2><dl class="facts"><dt>Your lane</dt><dd>Lane ${esc(YOU())}, on Kraken</dd><dt>Alerts</dt><dd>Only when lane ${esc(YOU())} wants you to buy or sell</dd><dt>Checks</dt><dd>Every 5 minutes. Lane ${esc(YOU())} decides once each trading day at 10:00 AM Eastern</dd><dt>Quiet hours</dt><dd>${c.quiet_hours_et[0]>12?c.quiet_hours_et[0]-12:c.quiet_hours_et[0]} PM to ${c.quiet_hours_et[1]} AM Eastern. Buys wait, sells always come through</dd><dt>Race length</dt><dd>${c.race_days} days</dd><dt>Crypto fee used</dt><dd>${(c.fees.kraken_limit*100).toFixed(2)}% (Kraken limit order)</dd><dt>Stocks</dt><dd>Commission-free on Kraken</dd><dt>Phone channel</dt><dd>ntfy app</dd></dl>`;
 }
 
 /* ---------- install as an app ---------- */
@@ -448,7 +450,9 @@ function openSheet(id){
   $("sh-t").textContent=`${buy?"Buy":"Sell"} ${NAMES[a.symbol]||a.symbol}`;
   $("sh-p").textContent=`${isAndroid()?`Open Kraken, tap Home, then ${a.symbol}.`:"Place it on Kraken,"} Then enter what you actually ${buy?"paid":"got"}. The signal price was ${px(sigPrice(a))}.`;
   $("sh-pl").textContent=buy?"Price you paid":"Price you sold at";
-  $("sh-price").value=sigPrice(a)??"";$("sh-dol").value=a.dollars!=null?a.dollars.toFixed(2):"";
+  $("sh-price").value=sigPrice(a)??"";
+  const held=portfolio().rows.find(r=>r.symbol===a.symbol);
+  $("sh-dol").value=buy?(a.dollars!=null?a.dollars.toFixed(2):""):(held&&sigPrice(a)?(held.units*sigPrice(a)).toFixed(2):"");
   $("sh-dl").textContent=buy?"Dollars you put in":"Dollars you got back";
   const k=$("sh-kr");k.href=krakenLink(a.symbol);if(isAndroid()){k.removeAttribute("target")}else{k.target="_blank";k.rel="noopener"}
   k.innerHTML=`${KR_ICON}${buy?"Buy":"Sell"} ${esc(a.symbol)} on Kraken first`;

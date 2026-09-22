@@ -26,7 +26,7 @@ def next_up():
              (nxt(15, 45, range(5)), None, "Trend check for lanes A and B"),
              (nxt(17, 0, range(7)), None, "Daily recap alert"),
              (nxt(9, 0, [6]), None, "Weekly coin rotation (lane E)"),
-             (nxt(10, 0, range(5)), None, "Lane F daily check: tells you what to buy or sell"),
+             (nxt(10, 0, range(5)), None, "Daily check for lanes F and G: tells you what to buy or sell"),
              (nxt(10, 0, [0]), None, "Weekly rotation (lanes A and B)")]
     out = []
     for when, label, what in items:
@@ -60,7 +60,7 @@ def main():
     news = News(health, cache, feed)
     ai = AI(cfg, health, cache)
     alerts = Alerts(cfg, health, log)
-    log[:] = [a for a in log if alerts.wanted(a.get("lane"), a.get("kind"))]
+    log[:] = [a for a in log if alerts.keep(a.get("lane"), a.get("kind"))]
     for a in log:
         if a.get("status") == "open" and now_ts() - a["ts"] > 86400:
             a["status"] = "expired"
